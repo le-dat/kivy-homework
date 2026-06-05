@@ -1,0 +1,1 @@
+- write docs step by step to this project => write flow instead of code directly
