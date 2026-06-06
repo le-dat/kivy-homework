@@ -4,6 +4,7 @@ import {
   OnModuleDestroy,
   Logger,
 } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { Queue } from 'bullmq';
 
 @Injectable()
@@ -65,6 +66,30 @@ export class VerificationQueueService implements OnModuleInit, OnModuleDestroy {
   // Exposed for testing purposes
   getQueueInstance(): Queue {
     return this.queue;
+  }
+
+  @Cron('0 0 * * *')
+  async cleanOldJobs() {
+    this.logger.log('Starting daily queue cleanup of old jobs...');
+    try {
+      const grace = 24 * 3600 * 1000; // 24 hours
+      const limit = 1000;
+
+      const cleanedCompleted = await this.queue.clean(
+        grace,
+        limit,
+        'completed',
+      );
+      const cleanedFailed = await this.queue.clean(grace, limit, 'failed');
+
+      this.logger.log(
+        `Daily cleanup completed. Removed ${cleanedCompleted.length} completed and ${cleanedFailed.length} failed jobs.`,
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to clean old queue jobs: ${errorMessage}`);
+    }
   }
 
   async onModuleDestroy() {

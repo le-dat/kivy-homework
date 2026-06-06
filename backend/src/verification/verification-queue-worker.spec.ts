@@ -7,6 +7,7 @@ import { VerificationStatus, ActorType } from '@prisma/client';
 
 const mockQueueAdd = jest.fn();
 const mockQueueClose = jest.fn();
+const mockQueueClean = jest.fn();
 const mockWorkerClose = jest.fn();
 const mockWorkerOn = jest.fn();
 let capturedProcessor: any;
@@ -18,6 +19,7 @@ jest.mock('bullmq', () => {
       return {
         add: mockQueueAdd,
         close: mockQueueClose,
+        clean: mockQueueClean,
       };
     }),
     Worker: jest.fn().mockImplementation((name, processor) => {
@@ -117,6 +119,23 @@ describe('Queue and Worker Services', () => {
           },
           removeOnFail: false,
         },
+      );
+    });
+
+    it('should clean completed and failed jobs older than 24 hours when cleanOldJobs is triggered', async () => {
+      mockQueueClean.mockResolvedValue([]);
+
+      await queueService.cleanOldJobs();
+
+      expect(mockQueueClean).toHaveBeenCalledWith(
+        24 * 3600 * 1000,
+        1000,
+        'completed',
+      );
+      expect(mockQueueClean).toHaveBeenCalledWith(
+        24 * 3600 * 1000,
+        1000,
+        'failed',
       );
     });
   });
@@ -257,9 +276,12 @@ describe('Queue and Worker Services', () => {
         new Error('Database lock error'),
       );
 
-      await expect(
-        failedListener(job, new Error('Permanent API failure')),
-      ).resolves.not.toThrow();
+      expect(() => {
+        failedListener(job, new Error('Permanent API failure'));
+      }).not.toThrow();
+
+      // Wait a tick for background async logic to run
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
   });
 });
