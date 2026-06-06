@@ -1,0 +1,98 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+enum Role {
+  SELLER
+  ADMIN
+}
+
+enum VerificationStatus {
+  PENDING
+  PROCESSING
+  VERIFIED
+  REJECTED
+  INCONCLUSIVE
+  APPROVED
+  SYSTEM_ERROR
+}
+
+enum ActorType {
+  SYSTEM
+  ADMIN
+  SELLER
+}
+
+model User {
+  id               String              @id @default(uuid())
+  email            String              @unique
+  passwordHash     String              @map("password_hash")
+  role             Role
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+  
+  verifications    Verification[]      @relation("SellerVerifications")
+  triggeredEvents  VerificationEvent[] @relation("ActorEvents")
+  products         Product[]           @relation("SellerProducts")
+
+  @@map("users")
+}
+
+model Verification {
+  id          String             @id @default(uuid())
+  sellerId    String             @map("seller_id")
+  documentUrl String             @map("document_url")
+  status      VerificationStatus @default(PENDING)
+  reason      String?            @db.Text
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  seller      User                @relation("SellerVerifications", fields: [sellerId], references: [id], onDelete: Cascade)
+  events      VerificationEvent[] @relation("VerificationEvents")
+
+  @@index([sellerId])
+  @@index([status])
+  @@map("verifications")
+}
+
+model VerificationEvent {
+  id             String              @id @default(uuid())
+  verificationId String              @map("verification_id")
+  fromStatus     VerificationStatus? @map("from_status")
+  toStatus       VerificationStatus  @map("to_status")
+  actorType      ActorType           @map("actor_type")
+  actorId        String?             @map("actor_id")
+  reason         String              @db.Text
+  createdAt      DateTime            @default(now()) @map("created_at")
+
+  verification   Verification        @relation("VerificationEvents", fields: [verificationId], references: [id], onDelete: Cascade)
+  actor          User?               @relation("ActorEvents", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([verificationId])
+  @@index([actorId])
+  @@map("verification_events")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  sellerId    String   @map("seller_id")
+  name        String
+  description String?  @db.Text
+  price       Decimal  @db.Decimal(10, 2)
+  isVisible   Boolean  @default(false) @map("is_visible")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  seller      User     @relation("SellerProducts", fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@index([sellerId])
+  @@index([isVisible])
+  @@map("products")
+}

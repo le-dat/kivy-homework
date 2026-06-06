@@ -47,6 +47,7 @@ stateDiagram-v2
     PROCESSING --> VERIFIED : Thành công
     PROCESSING --> REJECTED : Bị từ chối
     PROCESSING --> INCONCLUSIVE : Cần duyệt tay
+    PROCESSING --> SYSTEM_ERROR : Hết lượt retry / Lỗi hệ thống
     INCONCLUSIVE --> ADMIN_REVIEW
     ADMIN_REVIEW --> APPROVED : Admin duyệt
     ADMIN_REVIEW --> REJECTED : Admin từ chối
@@ -58,8 +59,8 @@ stateDiagram-v2
 > **Lỗi lập trình viên dễ làm sai:** Cho phép cập nhật ghi đè trạng thái kết thúc khi Webhook gửi về sai thứ tự (Out-of-order Webhook).
 > _Ví dụ:_ Webhook thông báo kết quả `INCONCLUSIVE` (đã được admin xem xét và duyệt thành `APPROVED`) bị ghi đè ngược bởi một Webhook thông báo kết quả `REJECTED` cũ đến muộn.
 >
-> **Giải pháp bảo vệ:** Trạng thái kết thúc (`VERIFIED`, `APPROVED`, `REJECTED`) là **bất biến (Immutable)**. Chặn ghi đè trực tiếp ở câu lệnh cập nhật DB:
-> `UPDATE verifications SET status = :new_status WHERE id = :id AND status NOT IN ('VERIFIED', 'APPROVED', 'REJECTED')`
+> **Giải pháp bảo vệ:** Trạng thái kết thúc (`VERIFIED`, `APPROVED`, `REJECTED`, `SYSTEM_ERROR`) là **bất biến (Immutable)**. Chặn ghi đè trực tiếp ở câu lệnh cập nhật DB:
+> `UPDATE verifications SET status = :new_status WHERE id = :id AND status NOT IN ('VERIFIED', 'APPROVED', 'REJECTED', 'SYSTEM_ERROR')`
 
 ---
 
