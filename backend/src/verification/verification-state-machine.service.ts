@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { VerificationStatus, ActorType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationService } from '../notification/notification.service';
 
 export interface StateActor {
   type: ActorType;
@@ -11,7 +12,10 @@ export interface StateActor {
 export class VerificationStateMachine {
   private readonly logger = new Logger(VerificationStateMachine.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   canTransition(
     current: VerificationStatus,
@@ -111,7 +115,10 @@ export class VerificationStateMachine {
     actor: StateActor,
     reason: string,
   ) {
-    return this.prisma.$transaction(async (tx) => {
+    let sellerId: string | null = null;
+    let verificationResult: { id: string; sellerId: string } | null = null;
+
+    const result = await this.prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<
         Array<{
           id: string;
@@ -179,7 +186,27 @@ export class VerificationStateMachine {
         });
       }
 
+      sellerId = verification.sellerId;
+      verificationResult = { id: updatedVerification.id, sellerId: verification.sellerId };
       return updatedVerification;
     });
+
+    // Send in-app notification to seller after successful transition
+    if (verificationResult && sellerId) {
+      try {
+        await this.notificationService.createVerificationOutcomeNotification(
+          sellerId,
+          nextStatus,
+          reason,
+        );
+      } catch (err) {
+        this.logger.error(
+          `Failed to create notification for verification ${verificationId}:`,
+          err,
+        );
+      }
+    }
+
+    return result;
   }
 }

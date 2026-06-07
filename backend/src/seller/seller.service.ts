@@ -240,4 +240,49 @@ export class SellerService {
       is_visible: p.isVisible,
     }));
   }
+
+  async getNotifications(sellerId: string) {
+    const notifications = await this.prisma.notification.findMany({
+      where: { sellerId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
+    return {
+      notifications: notifications.map((n) => ({
+        id: n.id,
+        title: n.title,
+        message: n.message,
+        is_read: n.isRead,
+        created_at: n.createdAt.toISOString(),
+      })),
+      unread_count: notifications.filter((n) => !n.isRead).length,
+    };
+  }
+
+  async markNotificationAsRead(sellerId: string, notificationId: string) {
+    const notification = await this.prisma.notification.findFirst({
+      where: { id: notificationId, sellerId },
+    });
+
+    if (!notification) {
+      return { success: false };
+    }
+
+    await this.prisma.notification.update({
+      where: { id: notificationId },
+      data: { isRead: true },
+    });
+
+    return { success: true };
+  }
+
+  async markAllNotificationsAsRead(sellerId: string) {
+    await this.prisma.notification.updateMany({
+      where: { sellerId, isRead: false },
+      data: { isRead: true },
+    });
+
+    return { success: true };
+  }
 }

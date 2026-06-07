@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   Param,
   UseGuards,
@@ -138,5 +139,31 @@ export class SellerController {
   })
   async listProducts(@CurrentUser() user: UserPayload) {
     return this.sellerService.listProducts(user.id);
+  }
+
+  @Get('notifications')
+  @ApiOperation({ summary: "Get seller's notifications" })
+  @ApiResponse({ status: 200, description: 'List of notifications with unread count' })
+  async getNotifications(@CurrentUser() user: UserPayload) {
+    return this.sellerService.getNotifications(user.id);
+  }
+
+  @Patch('notifications/:id/read')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Mark a notification as read' })
+  @ApiResponse({ status: 200, description: 'Notification marked as read' })
+  async markNotificationAsRead(
+    @CurrentUser() user: UserPayload,
+    @Param('id') notificationId: string,
+  ) {
+    return this.sellerService.markNotificationAsRead(user.id, notificationId);
+  }
+
+  @Post('notifications/read-all')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Mark all notifications as read' })
+  @ApiResponse({ status: 200, description: 'All notifications marked as read' })
+  async markAllNotificationsAsRead(@CurrentUser() user: UserPayload) {
+    return this.sellerService.markAllNotificationsAsRead(user.id);
   }
 }

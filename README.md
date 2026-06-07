@@ -65,17 +65,13 @@ The database has been pre-seeded with the following test accounts for evaluation
 ### What Works
 
 1. **Authentication & Authorization:** Uses JWT stored securely in **HttpOnly cookies**, with clear role separation between Admin and Seller.
-2. **Seller Pipeline:** Uploads documents as Base64, automatically queues them for moderation, creates and displays product lists.
+2. **Seller Pipeline:** Uploads documents to Supabase Storage, automatically queues them for moderation, creates and displays product lists.
 3. **Rate-Limited Queue:** Integrated **BullMQ + Redis** to ensure the request sending rate to third parties does not exceed the limit (Worker runs stably at ~80 req/minute).
 4. **State Machine:** Implements a strict State Machine controlling status transitions (`PENDING` -> `PROCESSING` -> `VERIFIED` / `REJECTED` / `INCONCLUSIVE` -> `APPROVED` / `REJECTED`). Includes pessimistic locking (Row Locking) to prevent Race Conditions when duplicate webhooks arrive.
 5. **Reconciliation (Active Reconciliation):** Cron job scans every 10 minutes, actively queries the third-party API for records stuck in `PROCESSING` status.
 6. **Admin Dashboard:** Next.js interface displaying metrics charts, profile list filtered by status, intuitive document viewer, timeline recording event history and profile approval actions.
 7. **Mock Service:** An independent Hono service simulating a third-party API with rate limit mechanisms (100 req/min), returning verification results asynchronously via Webhook or allowing polling for reconciliation.
 
-### Deliberately Cut / Partial
-
-1. **AWS S3 Storage:** To optimize development time, seller documents are currently stored directly as Base64 in the local database or written to local disk instead of being pushed to an actual cloud S3 service.
-2. **Real-time Notifications (WebSockets):** Verification status on the frontend is currently updated via a simple Refresh mechanism instead of WebSocket or Server-Sent Events (SSE).
 
 ---
 

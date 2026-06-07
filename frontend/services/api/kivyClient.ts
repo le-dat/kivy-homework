@@ -33,6 +33,14 @@ export interface UserProfile {
   role: 'SELLER' | 'ADMIN';
 }
 
+export interface NotificationRecord {
+  id: string;
+  title: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
 /**
  * KivyClient is a stateless HTTP client.
  * The access token is stored in an HttpOnly cookie by the backend on login
@@ -76,6 +84,15 @@ export class KivyClient {
 
     createProduct: (data: { name: string; description?: string; price: number }) =>
       api.post<Product>(API.PRODUCTS, data),
+
+    getNotifications: () =>
+      api.get<{ notifications: NotificationRecord[]; unread_count: number }>(API.NOTIFICATIONS),
+
+    markNotificationAsRead: (id: string) =>
+      api.patch<{ success: boolean }>(API.NOTIFICATION_READ(id), {}),
+
+    markAllNotificationsAsRead: () =>
+      api.post<{ success: boolean }>(API.NOTIFICATIONS_READ_ALL, {}),
   };
 
   admin = {

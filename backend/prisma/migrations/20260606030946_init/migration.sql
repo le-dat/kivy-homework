@@ -9,7 +9,7 @@ CREATE TYPE "ActorType" AS ENUM ('SYSTEM', 'ADMIN', 'SELLER');
 
 -- CreateTable
 CREATE TABLE "users" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "email" TEXT NOT NULL,
     "password_hash" TEXT NOT NULL,
     "role" "Role" NOT NULL,
@@ -21,8 +21,8 @@ CREATE TABLE "users" (
 
 -- CreateTable
 CREATE TABLE "verifications" (
-    "id" TEXT NOT NULL,
-    "seller_id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "seller_id" UUID NOT NULL,
     "document_url" TEXT NOT NULL,
     "status" "VerificationStatus" NOT NULL DEFAULT 'PENDING',
     "reason" TEXT,
@@ -34,12 +34,12 @@ CREATE TABLE "verifications" (
 
 -- CreateTable
 CREATE TABLE "verification_events" (
-    "id" TEXT NOT NULL,
-    "verification_id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "verification_id" UUID NOT NULL,
     "from_status" "VerificationStatus",
     "to_status" "VerificationStatus" NOT NULL,
     "actor_type" "ActorType" NOT NULL,
-    "actor_id" TEXT,
+    "actor_id" UUID,
     "reason" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -48,8 +48,8 @@ CREATE TABLE "verification_events" (
 
 -- CreateTable
 CREATE TABLE "products" (
-    "id" TEXT NOT NULL,
-    "seller_id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "seller_id" UUID NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "price" DECIMAL(10,2) NOT NULL,

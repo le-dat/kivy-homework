@@ -20,6 +20,9 @@ export const API = {
   ADMIN_VERIFICATIONS: '/admin/verifications',
   ADMIN_DECIDE: (id: string) => `/admin/verifications/${id}/decide`,
   ADMIN_HISTORY: (id: string) => `/admin/verifications/${id}/history`,
+  NOTIFICATIONS: '/seller/notifications',
+  NOTIFICATION_READ: (id: string) => `/seller/notifications/${id}/read`,
+  NOTIFICATIONS_READ_ALL: '/seller/notifications/read-all',
 } as const;
 
 export type Route = (typeof ROUTES)[keyof typeof ROUTES];

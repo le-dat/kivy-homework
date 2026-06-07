@@ -5,9 +5,10 @@ import { VerificationWorkerService } from './verification-worker.service';
 import { VerificationReconciliationService } from './verification-reconciliation.service';
 import { VerificationWebhookController } from './verification-webhook.controller';
 import { PrismaModule } from '../prisma/prisma.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, NotificationModule],
   controllers: [VerificationWebhookController],
   providers: [
     VerificationStateMachine,

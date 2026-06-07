@@ -31,7 +31,7 @@ enum ActorType {
 }
 
 model User {
-  id               String              @id @default(uuid())
+  id               String              @id @default(uuid()) @db.Uuid
   email            String              @unique
   passwordHash     String              @map("password_hash")
   role             Role
@@ -41,13 +41,14 @@ model User {
   verifications    Verification[]      @relation("SellerVerifications")
   triggeredEvents  VerificationEvent[] @relation("ActorEvents")
   products         Product[]           @relation("SellerProducts")
+  notifications    Notification[]      @relation("SellerNotifications")
 
   @@map("users")
 }
 
 model Verification {
-  id          String             @id @default(uuid())
-  sellerId    String             @map("seller_id")
+  id          String             @id @default(uuid()) @db.Uuid
+  sellerId    String             @map("seller_id") @db.Uuid
   documentUrl String             @map("document_url")
   status      VerificationStatus @default(PENDING)
   reason      String?            @db.Text
@@ -64,12 +65,12 @@ model Verification {
 }
 
 model VerificationEvent {
-  id             String              @id @default(uuid())
-  verificationId String              @map("verification_id")
+  id             String              @id @default(uuid()) @db.Uuid
+  verificationId String              @map("verification_id") @db.Uuid
   fromStatus     VerificationStatus? @map("from_status")
   toStatus       VerificationStatus  @map("to_status")
   actorType      ActorType           @map("actor_type")
-  actorId        String?             @map("actor_id")
+  actorId        String?             @map("actor_id") @db.Uuid
   reason         String              @db.Text
   createdAt      DateTime            @default(now()) @map("created_at")
 
@@ -82,8 +83,8 @@ model VerificationEvent {
 }
 
 model Product {
-  id          String   @id @default(uuid())
-  sellerId    String   @map("seller_id")
+  id          String   @id @default(uuid()) @db.Uuid
+  sellerId    String   @map("seller_id") @db.Uuid
   name        String
   description String?  @db.Text
   price       Decimal  @db.Decimal(10, 2)
@@ -96,4 +97,20 @@ model Product {
   @@index([sellerId])
   @@index([isVisible])
   @@map("products")
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  sellerId    String   @map("seller_id") @db.Uuid
+  title       String
+  message     String   @db.Text
+  isRead      Boolean  @default(false) @map("is_read")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  seller      User     @relation("SellerNotifications", fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@index([sellerId])
+  @@index([isRead])
+  @@index([sellerId, isRead, createdAt])
+  @@map("notifications")
 }
