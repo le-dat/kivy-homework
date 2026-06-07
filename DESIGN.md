@@ -41,16 +41,14 @@
 
 ```mermaid
 stateDiagram-v2
-    [*] --> UPLOADED
-    UPLOADED --> QUEUED
-    QUEUED --> PROCESSING
+    [*] --> PENDING
+    PENDING --> PROCESSING : System xử lý
     PROCESSING --> VERIFIED : Thành công
-    PROCESSING --> REJECTED : Bị từ chối
+    PROCESSING --> REJECTED : Từ chối
     PROCESSING --> INCONCLUSIVE : Cần duyệt tay
-    PROCESSING --> SYSTEM_ERROR : Hết lượt retry / Lỗi hệ thống
-    INCONCLUSIVE --> ADMIN_REVIEW
-    ADMIN_REVIEW --> APPROVED : Admin duyệt
-    ADMIN_REVIEW --> REJECTED : Admin từ chối
+    PROCESSING --> SYSTEM_ERROR : Lỗi hệ thống / Hết retry
+    INCONCLUSIVE --> APPROVED : Admin duyệt chấp nhận
+    INCONCLUSIVE --> REJECTED : Admin từ chối
 ```
 
 ### Bảo vệ trạng thái kết thúc (Terminal State Guard)
@@ -81,7 +79,7 @@ Hậu quả: Hồ sơ của seller bị kẹt ở trạng thái `PROCESSING` vô
 
 ### Giải pháp giảm thiểu (Mitigation Strategy)
 
-1. **Reconciliation (Đối soát tự động):** Chạy Cron job quét database mỗi 5 phút để tìm các bản ghi bị kẹt ở `PROCESSING` quá 15 phút.
-2. **State Pulling (Chủ động truy vấn):** Gọi API `GET /verifications/{id}` của bên thứ ba để cập nhật trạng thái mới nhất về DB.
-3. **Retry với Exponential Backoff & Jitter:** Khi API đối soát lỗi, thử lại theo chu kỳ tăng dần: thử lại sau 2s, 4s, 8s, 16s, 32s (cộng thêm độ trễ ngẫu nhiên - Jitter để tránh nghẽn tải hệ thống).
-4. **Xử lý khi cạn kiệt (Exhausted):** Sau 5 lần thử lại thất bại, chuyển bản ghi sang trạng thái `SYSTEM_ERROR`, đưa vào Dead-Letter Queue (DLQ) và bắn Paging Alert (Slack/Telegram) báo cho kỹ sư trực hệ thống kiểm tra thủ công.
+1. **Reconciliation (Đối soát tự động):** Chạy Cron job quét database mỗi 10 phút để tìm các bản ghi ở trạng thái `PROCESSING`.
+2. **State Pulling (Chủ động truy vấn):** Gọi API `GET /verifications/{id}` của bên thứ ba để đối chiếu và cập nhật trạng thái mới nhất về DB.
+3. **Retry với Exponential Backoff & Jitter:** Khi API đối soát lỗi, thử lại theo chu kỳ tăng dần (ví dụ: nhân tố 2 tăng dần kèm theo độ trễ ngẫu nhiên - Jitter để tránh nghẽn tải hệ thống).
+4. **Xử lý khi cạn kiệt (Exhausted):** Khi cạn kiệt số lần thử lại tại Worker hoặc gặp lỗi hệ thống nghiêm trọng, chuyển bản ghi sang trạng thái `SYSTEM_ERROR`, ghi log chi tiết và bắn Paging Alert (Slack/Telegram) để kỹ sư trực hệ thống kiểm tra thủ công.

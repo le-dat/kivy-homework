@@ -4,44 +4,129 @@ Hệ thống quản lý và xác thực danh tính người bán (Seller Identit
 
 ---
 
+## 🌐 Đường dẫn ứng dụng đã Deploy (Production URLs)
+
+*   **Frontend Web App:** [https://kivy-frontend.vercel.app](https://kivy-frontend.vercel.app) *(Placeholder)*
+*   **Backend REST API:** [https://kivy-backend.railway.app](https://kivy-backend.railway.app) *(Placeholder)*
+*   **Mock Verification Service:** [https://kivy-mock.railway.app](https://kivy-mock.railway.app) *(Placeholder)*
+
+---
+
+## 🔐 Tài khoản chạy thử (Seeded Credentials)
+
+Cơ sở dữ liệu đã được seed sẵn các tài khoản thử nghiệm sau để phục vụ quá trình chấm điểm:
+
+| Vai trò | Email | Mật khẩu | Chức năng kiểm thử |
+| :--- | :--- | :--- | :--- |
+| **Seller** | `seller@kivy.com` | `sellerpassword` | Upload tài liệu xác thực, xem trạng thái, quản lý sản phẩm. |
+| **Admin** | `admin@kivy.com` | `adminpassword` | Xem danh sách hồ sơ xác thực, kiểm duyệt hồ sơ `INCONCLUSIVE`. |
+
+---
+
+## 📊 Phạm vi hoàn thành (What's Built & What's Partial)
+
+### ✅ Những tính năng đã hoàn thành (What Works)
+1.  **Xác thực và phân quyền:** Sử dụng JWT được lưu trữ an toàn trong **HttpOnly cookie**, phân chia quyền rõ ràng giữa Admin và Seller.
+2.  **Seller Pipeline:** Tải lên tài liệu dạng Base64, tự động đưa vào hàng đợi kiểm duyệt, tạo và hiển thị danh sách sản phẩm.
+3.  **Hàng đợi kiểm soát Rate Limit:** Tích hợp **BullMQ + Redis** để đảm bảo tốc độ gửi yêu cầu sang bên thứ ba không vượt quá giới hạn (Worker chạy ổn định ở mức ~80 req/phút).
+4.  **State Machine:** Triển khai State Machine kiểm soát chặt chẽ quy trình chuyển đổi trạng thái (`PENDING` -> `PROCESSING` -> `VERIFIED` / `REJECTED` / `INCONCLUSIVE` -> `APPROVED` / `REJECTED`). Có cơ chế khóa bi quan (Row Locking) chống Race Condition khi webhook đến trùng lặp.
+5.  **Reconciliation (Đối soát tự động):** Cron job quét định kỳ mỗi 10 phút, chủ động truy vấn API bên thứ ba cho những hồ sơ bị kẹt ở trạng thái `PROCESSING`.
+6.  **Admin Dashboard:** Giao diện Next.js hiển thị biểu đồ chỉ số (Metrics), bảng danh sách hồ sơ lọc theo trạng thái, ngăn xem tài liệu trực quan, timeline ghi lại lịch sử sự kiện và hành động duyệt hồ sơ.
+7.  **Mock Service:** Một dịch vụ Hono độc lập giả lập API bên thứ ba với các cơ chế rate limit (100 req/min), trả kết quả bất đồng bộ qua Webhook hoặc cho phép polling đối soát.
+
+### ⚠️ Những phần cố ý lược bỏ / Đơn giản hóa (Deliberately Cut / Partial)
+1.  **AWS S3 Storage:** Để tối ưu hóa thời gian thực hiện, tài liệu của seller hiện được lưu trữ trực tiếp dưới dạng Base64 trong database local hoặc ghi đĩa cục bộ thay vì đẩy lên dịch vụ S3 cloud thực tế.
+2.  **Thông báo thời gian thực (Real-time WebSockets):** Trạng thái xác thực ở frontend hiện được cập nhật thông qua cơ chế Refresh/Polling đơn giản thay vì WebSocket hoặc Server-Sent Events (SSE).
+
+---
+
 ## 🚀 Hướng dẫn khởi chạy nhanh ở Local (Quick Start)
 
-Dự án sử dụng **Supabase Local (chạy Docker)** kết hợp với **Prisma** để phát triển offline một cách đồng bộ và an toàn.
+Dự án gồm **3 thành phần** cần khởi chạy theo thứ tự: Database → Mock Service → Backend → Frontend.
 
 ### Yêu cầu hệ thống (Prerequisites)
 - **Node.js** v20 trở lên
 - **pnpm** v9+ (hoặc npm/yarn)
 - **Docker** và Docker Compose (để khởi chạy Supabase local)
+- **Redis** (đã được cấu hình sẵn trong `REDIS_URL`ở `.env`)
 
-### Các bước cài đặt:
+---
 
-1. **Cài đặt thư viện**:
-   ```bash
-   cd backend
-   pnpm install
-   ```
-   *(Lệnh này sẽ tự động sinh Prisma Client sau khi cài đặt hoàn tất).*
+### Bước 1: Khởi tạo Database (Supabase Local)
 
-2. **Dựng môi trường Database Local**:
-   Đảm bảo Docker của bạn đã được bật, chạy lệnh sau trong thư mục `backend/` để khởi động Docker Supabase và tự động đồng bộ cấu trúc bảng:
-   ```bash
-   pnpm run db:setup
-   ```
+```bash
+cd backend
+pnpm install
+pnpm run db:setup
+```
 
-3. **Cấu hình biến môi trường**:
-   Copy file cấu hình mẫu và sử dụng thông tin kết nối local:
-   ```bash
-   cp .env.example .env
-   ```
-   Mở file `.env` và uncomment dòng kết nối database local (hoặc điền thông tin Supabase Online của bạn):
-   ```env
-   DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
-   ```
+Lệnh này sẽ:
+- Khởi động Docker Supabase local
+- Tự động chạy `prisma migrate dev` để tạo bảng
+- Sinh Prisma Client
 
-4. **Khởi động NestJS ở chế độ phát triển (Watch Mode)**:
-   ```bash
-   pnpm run start:dev
-   ```
+> **Lưu ý:** File `.env` đã có sẵn với `DATABASE_URL` trỏ về Supabase local. Nếu chưa có, copy từ `.env.example`.
+
+---
+
+### Bước 2: Khởi động Mock Service
+
+```bash
+# Mở terminal mới
+cd mock-service
+pnpm install
+pnpm run dev
+```
+
+- Mock Service chạy trên **port 3001**
+- Giả lập API bên thứ 3 với rate limit 100 req/min
+- Trả kết quả verification qua Webhook hoặc polling
+
+---
+
+### Bước 3: Khởi động Backend (NestJS)
+
+```bash
+# Mở terminal mới
+cd backend
+pnpm run start:dev
+```
+
+- Backend chạy trên **port 5000**
+- Tự động kết nối Redis qua `REDIS_URL` trong `.env`
+- BullMQ worker xử lý verification queue
+
+---
+
+### Bước 4: Khởi động Frontend (Next.js)
+
+```bash
+# Mở terminal mới
+cd frontend
+pnpm install
+pnpm run dev
+```
+
+- Frontend chạy trên **port 3000**
+- Kết nối backend tại `http://localhost:5000`
+
+---
+
+### ✅ Kiểm tra
+
+Sau khi khởi chạy thành công:
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:5000 |
+| Mock Service | http://localhost:3001 |
+| Swagger Docs | http://localhost:5000/api/docs |
+| Prisma Studio | `pnpm run db:studio` (port 5555) |
+
+**Tài khoản test:**
+- Seller: `seller@kivy.com` / `sellerpassword`
+- Admin: `admin@kivy.com` / `adminpassword`
 
 ---
 
