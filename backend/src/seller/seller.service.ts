@@ -38,15 +38,23 @@ export class SellerService {
       );
     }
 
-    // 2. Check if verification request already exists (re-submission is disabled)
     const latest = await this.prisma.verification.findFirst({
       where: { sellerId },
       orderBy: { createdAt: 'desc' },
     });
 
-    if (latest) {
+    if (
+      latest &&
+      ([
+        VerificationStatus.PENDING,
+        VerificationStatus.PROCESSING,
+        VerificationStatus.INCONCLUSIVE,
+        VerificationStatus.APPROVED,
+        VerificationStatus.VERIFIED,
+      ] as VerificationStatus[]).includes(latest.status)
+    ) {
       throw new BadRequestException(
-        `Seller already has a verification request with status ${latest.status}`,
+        `Seller already has an active verification request with status ${latest.status}`,
       );
     }
 

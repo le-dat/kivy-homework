@@ -41,6 +41,16 @@ export interface NotificationRecord {
   created_at: string;
 }
 
+export interface SellerVerificationRecord {
+  id: string;
+  status: VerificationStatus;
+  document_url: string;
+  reason: string | null;
+  created_at: string;
+  updated_at: string;
+  events: VerificationEventRecord[];
+}
+
 /**
  * KivyClient is a stateless HTTP client.
  * The access token is stored in an HttpOnly cookie by the backend on login
@@ -108,8 +118,8 @@ export class KivyClient {
       }
 
       const url = status
-        ? `${API.ADMIN_VERIFICATIONS}?status=${status}`
-        : API.ADMIN_VERIFICATIONS;
+          ? `${API.ADMIN_VERIFICATIONS}?status=${status}`
+          : API.ADMIN_VERIFICATIONS;
       return api.get<AdminVerificationRecord[]>(url);
     },
 
@@ -121,5 +131,8 @@ export class KivyClient {
 
     getVerificationHistory: (id: string) =>
       api.get<VerificationEventRecord[]>(API.ADMIN_HISTORY(id)),
+
+    getSellerVerificationHistory: (sellerId: string) =>
+      api.get<SellerVerificationRecord[]>(`/admin/sellers/${sellerId}/verifications`),
   };
 }

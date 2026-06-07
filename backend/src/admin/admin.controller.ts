@@ -121,6 +121,14 @@ export class AdminController {
     );
   }
 
+  @Get('sellers/:sellerId/verifications')
+  @ApiOperation({
+    summary: 'Retrieve all verification requests and their history for a seller',
+  })
+  async getSellerVerifications(@Param('sellerId') sellerId: string) {
+    return this.adminService.getSellerVerificationHistory(sellerId);
+  }
+
   @Get('verifications/:id/history')
   @ApiOperation({
     summary: 'Retrieve full transition history / audit trail of a verification',

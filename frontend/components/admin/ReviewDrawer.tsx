@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import DocumentViewer from './DocumentViewer';
 import Timeline from './Timeline';
 import { useApiClient } from '@/hooks/useApiClient';
-import type { VerificationEventRecord, AdminVerificationRecord } from '@/services/api/kivyClient';
+import type { SellerVerificationRecord, AdminVerificationRecord } from '@/services/api/kivyClient';
 
 interface ReviewDrawerProps {
   record: AdminVerificationRecord | null;
@@ -23,7 +23,7 @@ export default function ReviewDrawer({
 }: ReviewDrawerProps) {
   const client = useApiClient();
   const [activeTab, setActiveTab] = useState<'DOCUMENT' | 'TIMELINE'>('DOCUMENT');
-  const [history, setHistory] = useState<VerificationEventRecord[]>([]);
+  const [history, setHistory] = useState<SellerVerificationRecord[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [leftPercent, setLeftPercent] = useState(50); // splitting percentage
 
@@ -53,7 +53,7 @@ export default function ReviewDrawer({
     void (async () => {
       setIsLoadingHistory(true);
       try {
-        const data = await client.admin.getVerificationHistory(record.id);
+        const data = await client.admin.getSellerVerificationHistory(record.seller_id);
         if (!cancelled) setHistory(data);
       } catch {
         if (!cancelled) setHistory([]);
@@ -302,8 +302,71 @@ export default function ReviewDrawer({
                 </div>
               </div>
             ) : (
-              <div className="flex-1 overflow-y-auto">
-                <Timeline events={history} isLoading={isLoadingHistory} />
+              <div className="flex-1 overflow-y-auto flex flex-col gap-6">
+                {isLoadingHistory ? (
+                  <div className="flex flex-col gap-6 p-4">
+                    {[...Array(2)].map((_, i) => (
+                      <div key={i} className="flex gap-4 animate-pulse">
+                        <div className="w-3 h-3 rounded-full bg-white/10 mt-1" />
+                        <div className="flex-1 flex flex-col gap-2">
+                          <div className="h-4 w-28 bg-white/10 rounded" />
+                          <div className="h-3 w-48 bg-white/10 rounded" />
+                          <div className="h-3 w-full bg-white/10 rounded" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : history.length === 0 ? (
+                  <div className="text-center py-8 text-white/40 font-body text-sm">
+                    No status change history found.
+                  </div>
+                ) : (
+                  history.map((ver, idx) => (
+                    <div key={ver.id} className="bg-white/5 border border-white/10 rounded-md p-4 flex flex-col gap-4">
+                      <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                        <span className="font-semibold text-white/90">
+                          Submission #{history.length - idx} {ver.id === record.id && '(Current)'}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold uppercase ${
+                          ver.status === 'VERIFIED' || ver.status === 'APPROVED'
+                            ? 'bg-[--color-success]/20 text-green-200'
+                            : ver.status === 'REJECTED'
+                            ? 'bg-[--color-danger]/20 text-red-200'
+                            : 'bg-[--color-warning]/20 text-yellow-200'
+                        }`}>
+                          {ver.status}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-1.5 text-xs text-white/60">
+                        <div>
+                          <strong>Created At:</strong> {new Date(ver.created_at).toLocaleString()}
+                        </div>
+                        <div>
+                          <strong>Document:</strong>{' '}
+                          <a
+                            href={ver.document_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:underline break-all"
+                          >
+                            View Document ↗️
+                          </a>
+                        </div>
+                        {ver.reason && (
+                          <div className="mt-1 bg-red-950/20 border border-red-900/30 text-red-200 p-2 rounded-sm italic">
+                            <strong>Reason:</strong> {ver.reason}
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-2 pl-2 border-l border-white/10">
+                        <span className="text-[10px] font-semibold text-white/40 block mb-3 uppercase tracking-wider">
+                          State Transitions:
+                        </span>
+                        <Timeline events={ver.events} isLoading={false} />
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>

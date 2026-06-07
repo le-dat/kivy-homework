@@ -19,9 +19,9 @@ export default function VerificationPanel({
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
+  const [isResubmitting, setIsResubmitting] = useState(false);
 
   const config = STATUS_CONFIG[status] ?? STATUS_CONFIG.UNSUBMITTED;
-  const isTerminal = status === 'VERIFIED' || status === 'APPROVED';
   const isPending = status === 'PENDING' || status === 'PROCESSING';
   const isInconclusive = status === 'INCONCLUSIVE';
   const isRejected = status === 'REJECTED' || status === 'SYSTEM_ERROR';
@@ -32,6 +32,7 @@ export default function VerificationPanel({
     try {
       await onUpload(file);
       setFile(null);
+      setIsResubmitting(false);
     } finally {
       setIsUploading(false);
     }
@@ -54,13 +55,13 @@ export default function VerificationPanel({
 
       <p className="text-white/70 font-body text-sm">{config.description}</p>
 
-      {isRejected && rejectionReason && (
+      {isRejected && rejectionReason && !isResubmitting && (
         <div className="bg-danger/20 border border-danger text-red-200 p-3 rounded-sm text-sm font-body">
           <strong>Reason:</strong> {rejectionReason}
         </div>
       )}
 
-      {status === 'UNSUBMITTED' && (
+      {(status === 'UNSUBMITTED' || isResubmitting) && (
         <FileDropZone
           file={file}
           onFileSelect={handleFileSelect}
@@ -82,14 +83,37 @@ export default function VerificationPanel({
         </div>
       )}
 
-      {file && status === 'UNSUBMITTED' && (
+      {isRejected && !isResubmitting && (
+        <button
+          onClick={() => setIsResubmitting(true)}
+          className="p-3 bg-secondary text-white rounded-sm font-body text-base font-semibold
+            hover:scale-[1.02] active:scale-[0.98] transition-transform cursor-pointer"
+        >
+          Submit New Verification
+        </button>
+      )}
+
+      {file && (status === 'UNSUBMITTED' || isResubmitting) && (
         <button
           onClick={handleSubmit}
           disabled={isUploading}
           className="p-3 bg-secondary text-white rounded-sm font-body text-base font-semibold
-            hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed transition-transform"
+            hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed transition-transform cursor-pointer"
         >
           {isUploading ? 'Uploading...' : 'Submit Document'}
+        </button>
+      )}
+
+      {isResubmitting && (
+        <button
+          onClick={() => {
+            setIsResubmitting(false);
+            setFile(null);
+            setError('');
+          }}
+          className="p-2 border border-white/20 text-white/70 hover:text-white rounded-sm font-body text-xs cursor-pointer hover:bg-white/5 transition-colors self-start"
+        >
+          Cancel
         </button>
       )}
 

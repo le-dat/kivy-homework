@@ -34,10 +34,17 @@ export default function RouteGuard({ children, allowedRoles }: RouteGuardProps) 
         router.push(loginRoute);
       }
     } else {
+      // User is logged in
+      const correctDashboard = user.role === 'ADMIN' ? ROUTES.ADMIN_DASHBOARD : ROUTES.SELLER_DASHBOARD;
+
       if (isLoginPage) {
-        router.push(dashboardRoute);
+        if (allowedRoles.includes(user.role)) {
+          router.push(dashboardRoute);
+        } else {
+          router.push(correctDashboard);
+        }
       } else if (!allowedRoles.includes(user.role)) {
-        router.push(loginRoute);
+        router.push(correctDashboard);
       }
     }
   }, [user, isLoading, pathname, router, mounted, allowedRoles, isLoginPage, loginRoute, dashboardRoute]);

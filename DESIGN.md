@@ -28,6 +28,16 @@
 3. **Rate-limited Worker:** Worker silently pulls jobs from Queue and sends to third party at a safe rate (~80 requests/minute) to avoid exceeding rate limit.
 4. **Pre-validation:** Backend validates file format and size before sending. Error records are `REJECTED` locally, saving $2 USD per garbage request.
 
+### Queue Drain Analysis
+
+With 5,000 sellers onboarding over 7 days:
+- **Average rate:** 5,000 / (7 × 24 × 60) ≈ **714 sellers/day ≈ 30 sellers/hour ≈ 0.5 sellers/minute**
+- **Worker capacity:** 80 requests/minute (rate limit ceiling)
+- **Peak queue depth:** Even if all 5,000 arrive in the first day, at 80 req/min the queue drains in ~62 minutes
+- **Normal operation:** At 0.5 sellers/min average with 80 req/min capacity, queue depth is negligible — idle most of the time
+
+**Conclusion:** Queue buildup is not a real concern under the stated load. The system can handle 160× the average arrival rate. The "accept queue buildup" trade-off is a conservative buffer for unexpected spikes, not a necessary operational compromise.
+
 ### Trade-offs
 
 - **Prioritize system & budget protection:** Accept queue buildup during peak times (sellers wait longer), ensuring the system doesn't crash and avoiding penalty fees from exceeding API rate limits.
@@ -66,8 +76,9 @@ stateDiagram-v2
 
 **Omitted feature:** Re-upload/resubmission flow when rejected (`REJECTED`) or system error (`SYSTEM_ERROR`).
 
-- **Reason:** Save UI development time and avoid complex state transition control. Each seller has only 1 verification request record in the system, completely eliminating race condition risk when users intentionally or accidentally resubmit documents while Worker/Webhook is still processing.
+- **Reason:** For V1, I focused on the main verification flow. Resubmission would require additional business rules and increase the complexity of the state management. Since it wasn't required for the core workflow, I chose to postpone it and prioritize delivering a stable solution first.
 - **Risk:** When a seller enters wrong information or uploads a broken image leading to `REJECTED` status, they are permanently stuck and cannot re-initiate verification on the UI.
+- **Solution:** Instead of supporting document re-upload on the same verification, the seller can start a completely new verification request. This keeps the state machine simple because each verification request has its own lifecycle and audit history.
 
 ---
 
@@ -78,9 +89,9 @@ Consequence: Seller records get stuck in `PROCESSING` status indefinitely.
 
 ### Mitigation Strategy
 
-1. **Reconciliation (Automatic reconciliation):** Run Cron job scanning database every 10 minutes to find records in `PROCESSING` status.
+1. **Reconciliation (Automatic reconciliation):** Run Cron job scanning database every 5 minutes to find records in `PROCESSING` status.
 2. **State Pulling (Active querying):** Call third-party `GET /verifications/{id}` API to compare and update latest status to DB.
 3. **Retry with Exponential Backoff:** Two retry mechanisms:
    - **BullMQ Worker:** Exponential backoff with 60s base (60s→120s→240s→480s→960s), max 5 attempts. Retries for connection errors when sending jobs to third party.
-   - **Reconciliation Cron:** Retry on next cron cycle (10 minutes). No separate exponential backoff — each cron cycle is one "attempt" and the system keeps going until a response arrives or transitions to SYSTEM_ERROR.
+   - **Reconciliation Cron:** Retry on next cron cycle (5 minutes). No separate exponential backoff — each cron cycle is one "attempt" and the system keeps going until a response arrives or transitions to SYSTEM_ERROR.
 4. **Exhausted Handling:** When BullMQ worker exhausts all retry attempts (5 times), transition record to `SYSTEM_ERROR` status, log details for on-call engineers to manually investigate.

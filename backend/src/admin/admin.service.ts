@@ -118,6 +118,43 @@ export class AdminService {
     }));
   }
 
+  async getSellerVerificationHistory(sellerId: string) {
+    const verifications = await this.prisma.verification.findMany({
+      where: { sellerId },
+      include: {
+        events: {
+          include: {
+            actor: {
+              select: {
+                email: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return verifications.map((v) => ({
+      id: v.id,
+      status: v.status,
+      document_url: v.documentUrl,
+      reason: v.reason,
+      created_at: v.createdAt.toISOString(),
+      updated_at: v.updatedAt.toISOString(),
+      events: v.events.map((e) => ({
+        from_status: e.fromStatus,
+        to_status: e.toStatus,
+        actor_type: e.actorType,
+        actor_id: e.actorId,
+        actor_email: e.actor?.email || null,
+        reason: e.reason,
+        created_at: e.createdAt.toISOString(),
+      })),
+    }));
+  }
+
   async getMetrics() {
     const [pending, inconclusive, verified, approved, rejected] =
       await Promise.all([
