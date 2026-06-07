@@ -36,6 +36,7 @@ export class VerificationQueueService implements OnModuleInit, OnModuleDestroy {
     this.queue = new Queue('verification-queue', {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       connection: connection,
+      prefix: process.env.NODE_ENV === 'production' ? 'bull-prod' : 'bull-dev',
     });
     this.logger.log('Verification Queue initialized');
   }

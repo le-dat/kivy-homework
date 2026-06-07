@@ -19,6 +19,8 @@ Summary of self-inflicted or misconfigured errors and how they were actually fix
 | **Race Condition** | Logic Code | Test with simultaneous calls to both webhook and admin approval. | Used Row Locking (`SELECT FOR UPDATE`) inside the transaction. | Always lock the row when transitioning to the final state of a State Machine. |
 | **Migration Stuck on Render** | Ops Config | Deploy to Render froze hard (timeout) when running migration. | Changed the deploy command to: `DATABASE_URL=$DIRECT_URL prisma migrate deploy`. | Prisma 7 removed `directUrl`. To migrate through PgBouncer, override `DATABASE_URL` with the direct port. |
 | **Build dist/ directory off by one level** | TS Compilation | Render reported `MODULE_NOT_FOUND` because it couldn't find `dist/main.js`. | Added `prisma.config.ts` and `prisma/seed.ts` to the `exclude` list of `tsconfig.build.json`. | Files `.ts` outside `src/` cause `tsc` to misinterpret `rootDir`, pushing the build output to `dist/src/main.js`. |
+| **Cookie Blocked (Cross-Site 401)** | Authentication | 401 error in production (Vercel frontend + Render backend) after logging in. | Dynamic cookie config (`sameSite: 'none'`, `secure: true` for prod; `sameSite: 'lax'`, `secure: false` for dev). | Cross-site domains block `SameSite=Lax` cookies on AJAX requests. Must use `SameSite=None` + `Secure` in production. |
+| **Queue Job Hijacking (BullMQ)** | Queue / Ops | Uploaded doc locally but mock-service received nothing (stuck in PENDING). | Configured environment-specific prefix (`bull-prod` vs `bull-dev`) in Queue & Worker options. | Never share the same Redis namespace/queue across environments without prefix isolation. |
 
 ---
 
@@ -109,6 +111,60 @@ When adding the configuration file `prisma.config.ts` at the backend root, the T
 Exclude configuration and seed files that are outside `src/` in `tsconfig.build.json` to keep `rootDir` as `src/`:
 ```json
 "exclude": ["node_modules", "test", "dist", "**/*spec.ts", "prisma.config.ts", "prisma/seed.ts"]
+```
+</details>
+
+<details>
+<summary><b>4. Cookie Blocked (401 Unauthorized) on Production Cross-Site Setup</b></summary>
+
+#### Why did it happen?
+The app is deployed cross-site (Frontend: `kivy-homework.vercel.app`, Backend: `kivy-backend.onrender.com`). The NestJS backend set cookies with `sameSite: 'lax'`. Browsers reject `Lax` cookies on cross-site AJAX requests, so the browser did not send the authentication token cookie back on api requests (e.g. `/auth/me`), causing a `401 Unauthorized` block.
+
+#### Broken Config (AI wrote):
+```typescript
+res.cookie('token', access_token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  path: '/',
+  maxAge: 86400000,
+});
+```
+
+#### Fix:
+Dynamically apply `sameSite: 'none'` and `secure: true` in production environment to support cross-site cookie transmission, while maintaining `sameSite: 'lax'` for HTTP local testing:
+```typescript
+const isProd = process.env.NODE_ENV === 'production';
+res.cookie('token', access_token, {
+  httpOnly: true,
+  secure: isProd,
+  sameSite: isProd ? 'none' : 'lax',
+  path: '/',
+  maxAge: 86400000,
+});
+```
+</details>
+
+<details>
+<summary><b>5. Queue Job Hijacking Due to Shared Redis Instance</b></summary>
+
+#### Why did it happen?
+Both Local and Production environments used the same remote Render Redis instance. Because they both listened to the `'verification-queue'` queue name, the production backend worker frequently hijacked jobs pushed by the local backend. Since the backend databases were isolated (local DB vs production DB), the production worker failed to find the database records for the hijacked IDs, leaving the local verifications stuck in `PENDING` without forwarding them to the local `mock-service`.
+
+#### Broken Config (AI wrote):
+```typescript
+this.queue = new Queue('verification-queue', { connection });
+// ...
+this.worker = new Worker('verification-queue', async (job) => { ... }, { connection });
+```
+
+#### Fix:
+Differentiate queue namespaces dynamically using `prefix` based on environment:
+```typescript
+const prefix = process.env.NODE_ENV === 'production' ? 'bull-prod' : 'bull-dev';
+this.queue = new Queue('verification-queue', { connection, prefix });
+// ...
+this.worker = new Worker('verification-queue', handler, { connection, prefix });
 ```
 </details>
 

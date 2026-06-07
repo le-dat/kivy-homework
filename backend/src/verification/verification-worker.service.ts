@@ -122,6 +122,7 @@ export class VerificationWorkerService
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         connection: connection as any,
         concurrency: 5,
+        prefix: process.env.NODE_ENV === 'production' ? 'bull-prod' : 'bull-dev',
         limiter: {
           max: 80,
           duration: 60000,
