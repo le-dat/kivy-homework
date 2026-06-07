@@ -1,7 +1,7 @@
 import {
   Injectable,
   BadRequestException,
-  NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { VerificationStatus, ActorType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -13,6 +13,8 @@ export interface StateActor {
 
 @Injectable()
 export class VerificationStateMachine {
+  private readonly logger = new Logger(VerificationStateMachine.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   canTransition(
@@ -130,9 +132,11 @@ export class VerificationStateMachine {
 
       const row = rows[0];
       if (!row) {
-        throw new NotFoundException(
-          `Verification with ID ${verificationId} not found`,
+        this.logger.warn(
+          `Verification with ID ${verificationId} not found for transition to ${nextStatus}. ` +
+          `This may be due to a race condition or the verification was already processed.`,
         );
+        return null;
       }
 
       const verification = {

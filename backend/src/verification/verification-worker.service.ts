@@ -62,6 +62,7 @@ export class VerificationWorkerService
             body: JSON.stringify({
               document_url: documentUrl,
               callback_url: callbackUrl,
+              verification_id: verificationId, // Pass backend's ID to mock service
             }),
           });
 
@@ -84,6 +85,29 @@ export class VerificationWorkerService
           this.logger.log(
             `Verification job ${job.id} submitted successfully to mock service: ${JSON.stringify(result)}`,
           );
+
+          // Transition PENDING → PROCESSING after successful submission
+          try {
+            await this.stateMachine.transition(
+              verificationId,
+              VerificationStatus.PROCESSING,
+              { type: ActorType.SYSTEM },
+              'Verification request submitted to external service',
+            );
+            this.logger.log(
+              `Transitioned verification ${verificationId} to PROCESSING`,
+            );
+          } catch (transitionError) {
+            const errorMessage =
+              transitionError instanceof Error
+                ? transitionError.message
+                : String(transitionError);
+            this.logger.error(
+              `Failed to transition verification ${verificationId} to PROCESSING: ${errorMessage}`,
+            );
+            // Don't throw — the job succeeded, we just log the error
+            // The reconciliation cron will catch any stuck verifications
+          }
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : String(error);

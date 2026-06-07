@@ -168,6 +168,7 @@ describe('Queue and Worker Services', () => {
           body: JSON.stringify({
             document_url: job.data.documentUrl,
             callback_url: 'http://localhost:5000/api/v1/webhooks/verification',
+            verification_id: job.data.verificationId,
           }),
         }),
       );

@@ -154,18 +154,17 @@ describe('VerificationStateMachine', () => {
       updatedAt: new Date(),
     });
 
-    it('should throw NotFoundException if verification record is not found', async () => {
+    it('should return null if verification record is not found', async () => {
       prisma.$queryRaw.mockResolvedValue([]);
 
-      await expect(
-        service.transition(
-          id,
-          VerificationStatus.PROCESSING,
-          { type: ActorType.SYSTEM },
-          'Processing started',
-        ),
-      ).rejects.toThrow(NotFoundException);
+      const result = await service.transition(
+        id,
+        VerificationStatus.PROCESSING,
+        { type: ActorType.SYSTEM },
+        'Processing started',
+      );
 
+      expect(result).toBeNull();
       expect(prisma.$queryRaw).toHaveBeenCalled();
     });
 
