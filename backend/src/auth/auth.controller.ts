@@ -59,10 +59,11 @@ export class AuthController {
 
     const { access_token, user: profile } = await this.authService.login(user);
 
+    const isProd = process.env.NODE_ENV === 'production';
     res.cookie('token', access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       path: '/',
       maxAge: 86400000, // 1 day
     });
@@ -96,7 +97,13 @@ export class AuthController {
     type: LogoutResponseDto,
   })
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('token', { path: '/' });
+    const isProd = process.env.NODE_ENV === 'production';
+    res.clearCookie('token', {
+      path: '/',
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
+    });
     return { success: true };
   }
 
