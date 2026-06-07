@@ -29,10 +29,10 @@ export default function ProductList({ products, sellerVerified }: ProductListPro
       {products.map((product) => (
         <div
           key={product.id}
-          className="bg-white/6 border border-white/10 rounded-md p-4 flex flex-col gap-2 hover:scale-[1.02] transition-transform"
+          className="bg-black/6 border border-white/10 rounded-md p-4 flex flex-col gap-2 hover:scale-[1.02] transition-transform"
         >
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-display text-base text-white leading-tight">{product.name}</h3>
+            <h3 className="font-display text-base leading-tight">{product.name}</h3>
             {sellerVerified ? (
               <span className="flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold font-body uppercase tracking-wide bg-success text-white">
                 Live

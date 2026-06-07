@@ -11,14 +11,14 @@ interface AuditLogEntry extends VerificationEventRecord {
 }
 
 const STATUS_COLORS: Record<VerificationStatus, string> = {
-  UNSUBMITTED: 'text-white/40',
-  PENDING: 'text-blue-400',
-  PROCESSING: 'text-cyan-400',
-  VERIFIED: 'text-green-400',
-  APPROVED: 'text-green-400',
-  REJECTED: 'text-red-400',
-  INCONCLUSIVE: 'text-yellow-400',
-  SYSTEM_ERROR: 'text-red-500',
+  UNSUBMITTED: 'text-black/40',
+  PENDING: 'text-blue-600',
+  PROCESSING: 'text-cyan-600',
+  VERIFIED: 'text-green-600',
+  APPROVED: 'text-green-600',
+  REJECTED: 'text-red-600',
+  INCONCLUSIVE: 'text-amber-600',
+  SYSTEM_ERROR: 'text-red-700',
 };
 
 export default function AuditLogPage() {
@@ -143,7 +143,7 @@ export default function AuditLogPage() {
         </button>
       </div>
 
-      <div className="bg-white/5 rounded-md overflow-hidden">
+      <div className="bg-black/5 rounded-md overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-black/40">Loading audit log...</div>
         ) : filteredLogs.length === 0 ? (
@@ -151,7 +151,7 @@ export default function AuditLogPage() {
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/10 bg-white/5">
+              <tr className="border-b border-black/10 bg-black/5">
                 <th className="text-left p-3 font-semibold text-black/60">Timestamp</th>
                 <th className="text-left p-3 font-semibold text-black/60">Seller</th>
                 <th className="text-left p-3 font-semibold text-black/60">Event</th>
@@ -161,14 +161,14 @@ export default function AuditLogPage() {
             </thead>
             <tbody>
               {filteredLogs.map((log, idx) => (
-                <tr key={idx} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                <tr key={idx} className="border-b border-black/5 hover:bg-black/5 transition-colors">
                   <td className="p-3 text-black/60 text-xs font-mono whitespace-nowrap">
                     {formatDate(log.created_at)}
                   </td>
                   <td className="p-3 text-black/80 font-medium text-xs">{log.seller_email}</td>
                   <td className="p-3">
-                    <span className="text-white/40 text-xs">{log.from_status || 'START'}</span>
-                    <span className="text-white/20 mx-1">→</span>
+                    <span className="text-black/40 text-xs">{log.from_status || 'START'}</span>
+                    <span className="text-black/20 mx-1">→</span>
                     <span className={`font-semibold text-xs ${STATUS_COLORS[log.to_status]}`}>
                       {log.to_status}
                     </span>
