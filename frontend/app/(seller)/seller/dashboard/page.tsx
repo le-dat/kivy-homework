@@ -1,7 +1,7 @@
 'use client';
 
 import { useSellerVerification } from '@/hooks/useSellerVerification';
-import { VerificationPanel } from '@/components/dashboard';
+import { VerificationPanel } from '@/components/seller';
 
 export default function SellerDashboardPage() {
   const {

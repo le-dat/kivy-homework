@@ -1,7 +1,7 @@
 'use client';
 
 import { useSellerProducts } from '@/hooks/useSellerProducts';
-import { ProductPanel } from '@/components/dashboard';
+import { ProductPanel } from '@/components/seller';
 
 export default function SellerProductsPage() {
   const {

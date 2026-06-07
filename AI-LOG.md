@@ -1,9 +1,5 @@
 # AI Log - Kivy Seller Verification Platform
 
-Tài liệu ghi chép lại cách thức cộng tác với AI (Gemini/Antigravity) nhằm minh bạch hóa các phần việc được ủy quyền, lỗi của AI và cách lập trình viên kiểm soát chất lượng hệ thống.
-
----
-
 ## 1. Các phần việc ủy quyền cho AI (Delegated Tasks)
 
 | Tác vụ ủy quyền | Chi tiết thực hiện bởi AI | Lý do ủy quyền & Sự kiểm soát |
@@ -14,17 +10,27 @@ Tài liệu ghi chép lại cách thức cộng tác với AI (Gemini/Antigravit
 
 ---
 
-## 2. Lỗi của AI và cách phát hiện & sửa chữa (AI Mistakes & Fixes)
+## 2. Lỗi của AI và cách sửa (AI Mistakes & Fixes)
 
-AI đã đề xuất giải pháp cập nhật trạng thái đơn giản, gây ra lỗ hổng **Race Condition** nghiêm trọng khi xử lý Webhook bất đồng bộ đồng thời từ bên thứ ba hoặc thao tác phê duyệt thủ công của Admin.
+Tóm tắt nhanh mấy lỗi do AI tự chế/cấu hình sai và cách xử lý thực tế:
 
-### Chi tiết lỗi
-Hàm `transition` ban đầu do AI viết chỉ kiểm tra trạng thái trong bộ nhớ rồi gọi `update` trực tiếp. Nếu có 2 luồng đồng thời gọi cập nhật, trạng thái có thể bị ghi đè không hợp lệ (vi phạm tính bất biến của trạng thái kết thúc).
+| Lỗi của AI | Kiểu lỗi | Phát hiện thế nào? | Sửa ra sao? | Bài học rút ra |
+| :--- | :--- | :--- | :--- | :--- |
+| **Race Condition** | Code Logic | Test gọi đồng thời cả webhook và admin duyệt. | Dùng Row Locking (`SELECT FOR UPDATE`) trong transaction. | Luôn khóa dòng (lock row) khi đổi trạng thái cuối của State Machine. |
+| **Kẹt Migration trên Render** | Cấu hình Ops | Deploy lên Render bị treo cứng (timeout) lúc chạy migration. | Đổi câu lệnh deploy thành: `DATABASE_URL=$DIRECT_URL prisma migrate deploy`. | Prisma 7 bỏ `directUrl`. Muốn migrate qua PgBouncer phải ghi đè `DATABASE_URL` bằng cổng trực tiếp. |
+| **Lệch thư mục build `dist`** | Biên dịch TS | Render báo lỗi `MODULE_NOT_FOUND` do không thấy file `dist/main.js`. | Thêm `prisma.config.ts` và `prisma/seed.ts` vào `exclude` của `tsconfig.build.json`. | File `.ts` nằm ngoài `src/` sẽ làm tsc hiểu sai `rootDir`, đẩy file build vào sâu trong `dist/src/main.js`. |
+
+---
+
+### Chi tiết lỗi & Code khắc phục
 
 <details>
-<summary><b>Mã nguồn trước và sau khi sửa lỗi (Before & After)</b></summary>
+<summary><b>1. Race Condition khi đổi trạng thái (State Transition)</b></summary>
 
-#### Trước (Đề xuất lỗi của AI):
+#### Tại sao lỗi?
+Hàm `transition` cũ chỉ check trạng thái trên RAM rồi `update` DB luôn. Nếu 2 request cùng gọi một lúc, trạng thái cuối sẽ bị ghi đè đè lên nhau, phá hỏng logic bất biến.
+
+#### Code lỗi (AI viết):
 ```typescript
 async transition(verificationId: string, nextStatus: VerificationStatus) {
   const current = await this.prisma.verification.findUnique({ where: { id: verificationId } });
@@ -38,7 +44,7 @@ async transition(verificationId: string, nextStatus: VerificationStatus) {
 }
 ```
 
-#### Sau (Lập trình viên khắc phục bằng Row Locking):
+#### Code sửa (Lập trình viên viết lại):
 ```typescript
 async transition(
   verificationId: string,
@@ -47,7 +53,7 @@ async transition(
   reason: string,
 ) {
   return this.prisma.$transaction(async (tx) => {
-    // Sử dụng khóa SELECT FOR UPDATE để khóa dòng tránh Race Condition
+    // Khóa dòng bằng SELECT FOR UPDATE để chặn Race Condition
     const rows = await tx.$queryRaw<any[]>`
       SELECT id, seller_id, status, reason
       FROM verifications
@@ -61,13 +67,48 @@ async transition(
       throw new BadRequestException(`Cannot transition from ${row.status} to ${nextStatus}`);
     }
     
-    // Tiến hành cập nhật trạng thái...
     return tx.verification.update({
       where: { id: verificationId },
       data: { status: nextStatus, reason, actor }
     });
   });
 }
+```
+</details>
+
+<details>
+<summary><b>2. Treo tiến trình Migrate do cổng PgBouncer (Prisma 7)</b></summary>
+
+#### Tại sao lỗi?
+Khi deploy lên Render, migration mặc định chạy qua cổng pooler `6543` (Transaction Mode) của Supabase. Cổng này không hỗ trợ Advisory Locks (khóa tư vấn) nên Prisma Migrate bị treo cứng. Từ Prisma 7, `directUrl` trong schema bị khai tử nên không cấu hình tĩnh được nữa.
+
+#### Lệnh lỗi (AI viết):
+```json
+"db:deploy": "prisma migrate deploy"
+```
+
+#### Cách sửa:
+Ép lệnh deploy chạy qua cổng trực tiếp `5432` bằng cách ghi đè biến môi trường lúc chạy:
+```json
+"db:deploy": "DATABASE_URL=$DIRECT_URL prisma migrate deploy"
+```
+</details>
+
+<details>
+<summary><b>3. Lệch thư mục build dist/main do tsconfig rootDir</b></summary>
+
+#### Tại sao lỗi?
+Khi thêm file cấu hình `prisma.config.ts` ở thư mục gốc của backend, trình biên dịch TypeScript (`tsc`) tự mở rộng `rootDir` của dự án từ `src/` ra toàn bộ thư mục cha. Kết quả là file build bị đẩy vào sâu trong `dist/src/main.js` thay vì `dist/main.js`, làm Render không tìm thấy file khởi chạy.
+
+#### Cấu hình lỗi (AI viết):
+```json
+"exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+```
+
+#### Cách sửa:
+Loại trừ các file cấu hình và seed nằm ngoài `src/` trong `tsconfig.build.json` để giữ nguyên `rootDir` là `src/`:
+```json
+"exclude": ["node_modules", "test", "dist", "**/*spec.ts", "prisma.config.ts", "prisma/seed.ts"]
 ```
 </details>
 
