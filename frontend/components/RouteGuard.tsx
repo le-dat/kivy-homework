@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { ROUTES } from '@/constants';
 import type { ReactNode } from 'react';
+import LoadingScreen from './LoadingScreen';
 
 interface RouteGuardProps {
   children: ReactNode;
@@ -52,36 +53,20 @@ export default function RouteGuard({ children, allowedRoles }: RouteGuardProps) 
   // Prevent SSR rendering differences / hydration mismatch
   if (!mounted || isLoading) {
     const loadingText = allowedRoles.includes('ADMIN') ? 'Loading Admin Console...' : 'Loading Seller Console...';
-    return (
-      <div className="min-h-screen bg-[#EDEADE] flex items-center justify-center font-body text-[#111827]">
-        {loadingText}
-      </div>
-    );
+    return <LoadingScreen message={loadingText} />;
   }
 
   // Show loading during redirect states to prevent flash of content
   if (user && isLoginPage) {
-    return (
-      <div className="min-h-screen bg-[#EDEADE] flex items-center justify-center font-body text-[#111827]">
-        Redirecting to dashboard...
-      </div>
-    );
+    return <LoadingScreen message="Redirecting to dashboard..." />;
   }
 
   if (!user && !isLoginPage) {
-    return (
-      <div className="min-h-screen bg-[#EDEADE] flex items-center justify-center font-body text-[#111827]">
-        Redirecting to login...
-      </div>
-    );
+    return <LoadingScreen message="Redirecting to login..." />;
   }
 
   if (user && !isLoginPage && !allowedRoles.includes(user.role)) {
-    return (
-      <div className="min-h-screen bg-[#EDEADE] flex items-center justify-center font-body text-[#111827]">
-        Unauthorized. Redirecting...
-      </div>
-    );
+    return <LoadingScreen message="Unauthorized. Redirecting..." />;
   }
 
   return <>{children}</>;

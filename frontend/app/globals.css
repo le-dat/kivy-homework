@@ -49,3 +49,13 @@ body {
   color: var(--color-text);
   font-family: var(--font-body), Arial, Helvetica, sans-serif;
 }
+
+/* Loading spinner */
+@keyframes spin-ring {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-spin-ring {
+  animation: spin-ring 0.8s linear infinite;
+}
