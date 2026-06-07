@@ -73,11 +73,14 @@ export class SellerController {
     const originalname = file.originalname as string;
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const size = file.size as number;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const mimetype = file.mimetype as string;
 
     return this.sellerService.submitVerification(user.id, {
       originalname,
       buffer,
       size,
+      mimetype,
     });
   }
 

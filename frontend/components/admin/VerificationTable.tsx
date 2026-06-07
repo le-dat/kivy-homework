@@ -28,7 +28,7 @@ export default function VerificationTable({
     const styles: Record<VerificationStatus, string> = {
       UNSUBMITTED: 'bg-white/20 text-white/80 border-white/20',
       PENDING: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
-      PROCESSING: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
+      PROCESSING: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30',
       VERIFIED: 'bg-[--color-success]/10 text-[--color-success] border-[--color-success]/30',
       APPROVED: 'bg-[--color-success]/10 text-[--color-success] border-[--color-success]/30',
       REJECTED: 'bg-[--color-danger]/10 text-[--color-danger] border-[--color-danger]/30',

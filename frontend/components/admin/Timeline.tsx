@@ -26,7 +26,7 @@ export default function Timeline({ events, isLoading }: TimelineProps) {
     const colors: Record<VerificationStatus, string> = {
       UNSUBMITTED: 'text-white/40',
       PENDING: 'text-blue-400',
-      PROCESSING: 'text-purple-400',
+      PROCESSING: 'text-cyan-400',
       VERIFIED: 'text-[--color-success]',
       APPROVED: 'text-[--color-success]',
       REJECTED: 'text-[--color-danger]',

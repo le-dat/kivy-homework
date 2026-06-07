@@ -54,8 +54,8 @@ stateDiagram-v2
 ### Bảo vệ trạng thái kết thúc (Terminal State Guard)
 
 > [!CAUTION]
-> **Lỗi lập trình viên dễ làm sai:** Cho phép cập nhật ghi đè trạng thái kết thúc khi Webhook gửi về sai thứ tự (Out-of-order Webhook).
-> _Ví dụ:_ Webhook thông báo kết quả `INCONCLUSIVE` (đã được admin xem xét và duyệt thành `APPROVED`) bị ghi đè ngược bởi một Webhook thông báo kết quả `REJECTED` cũ đến muộn.
+> **Lỗi lập trình viên cẩu thả dễ mắc phải:** Chỉ kiểm tra điều kiện lỏng lẻo (ví dụ: chỉ tìm bản ghi theo `id` để cập nhật trạng thái mà không kiểm tra trạng thái hiện tại trong DB, hoặc chỉ check `WHERE status = 'PROCESSING'`).
+> *Hậu quả của sai lầm này:* Khi một Webhook thông báo kết quả `INCONCLUSIVE` (cần duyệt tay) được admin xử lý và cập nhật thành `APPROVED` (trạng thái kết thúc). Ngay sau đó, một Webhook cũ báo `REJECTED` bị trễ do nghẽn mạng gửi đến muộn. Nếu engineer cẩu thả chỉ chạy lệnh `UPDATE` dựa theo ID bản ghi hoặc không bảo vệ trạng thái kết thúc, Webhook cũ này sẽ ghi đè trạng thái `APPROVED` của admin thành `REJECTED`, phá hỏng tính nhất quán của hệ thống.
 >
 > **Giải pháp bảo vệ:** Trạng thái kết thúc (`VERIFIED`, `APPROVED`, `REJECTED`, `SYSTEM_ERROR`) là **bất biến (Immutable)**. Chặn ghi đè trực tiếp ở câu lệnh cập nhật DB:
 > `UPDATE verifications SET status = :new_status WHERE id = :id AND status NOT IN ('VERIFIED', 'APPROVED', 'REJECTED', 'SYSTEM_ERROR')`
@@ -81,5 +81,5 @@ Hậu quả: Hồ sơ của seller bị kẹt ở trạng thái `PROCESSING` vô
 
 1. **Reconciliation (Đối soát tự động):** Chạy Cron job quét database mỗi 10 phút để tìm các bản ghi ở trạng thái `PROCESSING`.
 2. **State Pulling (Chủ động truy vấn):** Gọi API `GET /verifications/{id}` của bên thứ ba để đối chiếu và cập nhật trạng thái mới nhất về DB.
-3. **Retry với Exponential Backoff & Jitter:** Khi API đối soát lỗi, thử lại theo chu kỳ tăng dần (ví dụ: nhân tố 2 tăng dần kèm theo độ trễ ngẫu nhiên - Jitter để tránh nghẽn tải hệ thống).
+3. **Retry với Exponential Backoff & Jitter:** Khi API đối soát gặp lỗi kết nối, thử lại theo chu kỳ tăng dần: lần 1 sau **5 phút**, lần 2 sau **15 phút**, lần 3 sau **1 giờ**, lần 4 sau **4 giờ** (kèm theo độ trễ ngẫu nhiên - Jitter từ 1-5 phút để phân tán lưu lượng tải đột biến).
 4. **Xử lý khi cạn kiệt (Exhausted):** Khi cạn kiệt số lần thử lại tại Worker hoặc gặp lỗi hệ thống nghiêm trọng, chuyển bản ghi sang trạng thái `SYSTEM_ERROR`, ghi log chi tiết và bắn Paging Alert (Slack/Telegram) để kỹ sư trực hệ thống kiểm tra thủ công.

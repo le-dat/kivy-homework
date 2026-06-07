@@ -7,7 +7,6 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { VerificationQueueService } from '../verification/verification-queue.service';
 import { VerificationStatus, ActorType } from '@prisma/client';
-import * as fs from 'fs';
 import * as path from 'path';
 
 @Injectable()
@@ -19,7 +18,12 @@ export class SellerService {
 
   async submitVerification(
     sellerId: string,
-    file: { originalname: string; buffer: Buffer; size: number },
+    file: {
+      originalname: string;
+      buffer: Buffer;
+      size: number;
+      mimetype?: string;
+    },
   ) {
     // 1. Pre-validation checks: size < 2MB, allowed extensions
     const maxSize = 2 * 1024 * 1024; // 2MB
@@ -55,18 +59,46 @@ export class SellerService {
       }
     }
 
-    // 3. Save the file to local uploads directory
-    const uploadDir = path.join(process.cwd(), 'uploads', 'documents');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    // 3. Upload the file to Supabase Storage
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new BadRequestException(
+        'Supabase storage is not configured on the server',
+      );
     }
 
+    const bucketName = process.env.SUPABASE_BUCKET || 'kivy-bucket';
     const fileExt = path.extname(file.originalname);
     const filename = `${sellerId}-${Date.now()}${fileExt}`;
-    const filePath = path.join(uploadDir, filename);
-    fs.writeFileSync(filePath, file.buffer);
+    const uploadUrl = `${supabaseUrl}/storage/v1/object/${bucketName}/${filename}`;
 
-    const documentUrl = `/uploads/documents/${filename}`;
+    try {
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${supabaseKey}`,
+          apikey: supabaseKey,
+          'Content-Type': file.mimetype || 'application/octet-stream',
+        },
+        body: file.buffer as unknown as BodyInit,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Supabase returned status ${response.status}: ${errorText}`,
+        );
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new BadRequestException(
+        `Failed to upload document to storage: ${msg}`,
+      );
+    }
+
+    const documentUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${filename}`;
 
     // 4. Create database records inside a transaction
     const verification = await this.prisma.$transaction(async (tx) => {
