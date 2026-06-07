@@ -61,7 +61,7 @@ export default function VerificationPanel({
 
       <p className="text-white/70 font-body text-sm">{config.description}</p>
 
-      {rejectionReason && (
+      {isRejected && rejectionReason && (
         <div className="bg-danger/20 border border-danger text-red-200 p-3 rounded-sm text-sm font-body">
           <strong>Reason:</strong> {rejectionReason}
         </div>
