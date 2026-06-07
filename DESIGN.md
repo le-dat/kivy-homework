@@ -81,4 +81,4 @@ Hậu quả: Hồ sơ của seller bị kẹt ở trạng thái `PROCESSING` vô
 1. **Reconciliation (Đối soát tự động):** Chạy Cron job quét database mỗi 10 phút để tìm các bản ghi ở trạng thái `PROCESSING`.
 2. **State Pulling (Chủ động truy vấn):** Gọi API `GET /verifications/{id}` của bên thứ ba để đối chiếu và cập nhật trạng thái mới nhất về DB.
 3. **Retry với Exponential Backoff & Jitter:** Khi API đối soát gặp lỗi kết nối, thử lại theo chu kỳ tăng dần: lần 1 sau **5 phút**, lần 2 sau **15 phút**, lần 3 sau **1 giờ**, lần 4 sau **4 giờ** (kèm theo độ trễ ngẫu nhiên - Jitter từ 1-5 phút để phân tán lưu lượng tải đột biến).
-4. **Xử lý khi cạn kiệt (Exhausted):** Khi cạn kiệt số lần thử lại tại Worker hoặc gặp lỗi hệ thống nghiêm trọng, chuyển bản ghi sang trạng thái `SYSTEM_ERROR`, ghi log chi tiết và bắn Paging Alert (Slack/Telegram) để kỹ sư trực hệ thống kiểm tra thủ công.
+4. **Xử lý khi cạn kiệt (Exhausted):** Khi cạn kiệt số lần thử lại tại Worker hoặc gặp lỗi hệ thống nghiêm trọng, chuyển bản ghi sang trạng thái `SYSTEM_ERROR`, ghi log chi tiết để kỹ sư trực hệ thống kiểm tra thủ công.
