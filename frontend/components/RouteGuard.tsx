@@ -53,6 +53,14 @@ export default function RouteGuard({ children, allowedRoles }: RouteGuardProps) 
   }
 
   // Show loading during redirect states to prevent flash of content
+  if (user && isLoginPage) {
+    return (
+      <div className="min-h-screen bg-[#EDEADE] flex items-center justify-center font-body text-[#111827]">
+        Redirecting to dashboard...
+      </div>
+    );
+  }
+
   if (!user && !isLoginPage) {
     return (
       <div className="min-h-screen bg-[#EDEADE] flex items-center justify-center font-body text-[#111827]">

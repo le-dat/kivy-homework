@@ -187,7 +187,10 @@ export class VerificationStateMachine {
       }
 
       sellerId = verification.sellerId;
-      verificationResult = { id: updatedVerification.id, sellerId: verification.sellerId };
+      verificationResult = {
+        id: updatedVerification.id,
+        sellerId: verification.sellerId,
+      };
       return updatedVerification;
     });
 

@@ -87,11 +87,7 @@ export function useSellerVerification() {
     showToast('Document uploaded successfully!', 'success');
   }, [client, showToast]);
 
-  const handleRetry = useCallback(() => {
-    setStatus('UNSUBMITTED');
-    setRejectionReason(null);
-    lastStatusRef.current = null;
-  }, []);
+
 
   const markNotificationAsRead = useCallback(async (id: string) => {
     await client.seller.markNotificationAsRead(id);
@@ -116,7 +112,6 @@ export function useSellerVerification() {
     notifications,
     unreadCount,
     handleUpload,
-    handleRetry,
     markNotificationAsRead,
     markAllNotificationsAsRead,
     logout,

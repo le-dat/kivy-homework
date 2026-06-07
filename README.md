@@ -68,7 +68,7 @@ The database has been pre-seeded with the following test accounts for evaluation
 2. **Seller Pipeline:** Uploads documents to Supabase Storage, automatically queues them for moderation, creates and displays product lists.
 3. **Rate-Limited Queue:** Integrated **BullMQ + Redis** to ensure the request sending rate to third parties does not exceed the limit (Worker runs stably at ~80 req/minute).
 4. **State Machine:** Implements a strict State Machine controlling status transitions (`PENDING` -> `PROCESSING` -> `VERIFIED` / `REJECTED` / `INCONCLUSIVE` -> `APPROVED` / `REJECTED`). Includes pessimistic locking (Row Locking) to prevent Race Conditions when duplicate webhooks arrive.
-5. **Reconciliation (Active Reconciliation):** Cron job scans every 10 minutes, actively queries the third-party API for records stuck in `PROCESSING` status.
+5. **Reconciliation (Active Reconciliation):** Cron job scans every 5 minutes, actively queries the third-party API for records stuck in `PROCESSING` status.
 6. **Admin Dashboard:** Next.js interface displaying metrics charts, profile list filtered by status, intuitive document viewer, timeline recording event history and profile approval actions.
 7. **Mock Service:** An independent Hono service simulating a third-party API with rate limit mechanisms (100 req/min), returning verification results asynchronously via Webhook or allowing polling for reconciliation.
 

@@ -4,6 +4,7 @@ import { BadRequestException } from '@nestjs/common';
 import { VerificationStatus, ActorType } from '@prisma/client';
 import { VerificationStateMachine } from './verification-state-machine.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationService } from '../notification/notification.service';
 
 describe('VerificationStateMachine', () => {
   let service: VerificationStateMachine;
@@ -30,6 +31,12 @@ describe('VerificationStateMachine', () => {
         {
           provide: PrismaService,
           useValue: mockPrisma,
+        },
+        {
+          provide: NotificationService,
+          useValue: {
+            createVerificationOutcomeNotification: jest.fn().mockResolvedValue({}),
+          },
         },
       ],
     }).compile();

@@ -12,7 +12,6 @@ export default function SellerDashboardPage() {
     isLoadingVerification,
     toast,
     handleUpload,
-    handleRetry,
     notifications,
     unreadCount,
     markNotificationAsRead,
@@ -102,7 +101,6 @@ export default function SellerDashboardPage() {
             status={status}
             rejectionReason={rejectionReason}
             onUpload={handleUpload}
-            onRetry={handleRetry}
           />
         )}
       </div>

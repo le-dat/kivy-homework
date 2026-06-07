@@ -9,14 +9,12 @@ interface VerificationPanelProps {
   status: VerificationStatus;
   rejectionReason?: string | null;
   onUpload: (file: File) => Promise<void>;
-  onRetry: () => void;
 }
 
 export default function VerificationPanel({
   status,
   rejectionReason,
   onUpload,
-  onRetry,
 }: VerificationPanelProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -33,6 +31,7 @@ export default function VerificationPanel({
     setIsUploading(true);
     try {
       await onUpload(file);
+      setFile(null);
     } finally {
       setIsUploading(false);
     }
@@ -40,12 +39,6 @@ export default function VerificationPanel({
 
   const handleFileSelect = (selectedFile: File) => {
     setFile(selectedFile);
-  };
-
-  const handleRetryClick = () => {
-    setFile(null);
-    setError('');
-    onRetry();
   };
 
   return (
@@ -67,7 +60,7 @@ export default function VerificationPanel({
         </div>
       )}
 
-      {(status === 'UNSUBMITTED' || isRejected) && (
+      {status === 'UNSUBMITTED' && (
         <FileDropZone
           file={file}
           onFileSelect={handleFileSelect}
@@ -89,7 +82,7 @@ export default function VerificationPanel({
         </div>
       )}
 
-      {file && !isTerminal && !isPending && (
+      {file && status === 'UNSUBMITTED' && (
         <button
           onClick={handleSubmit}
           disabled={isUploading}
@@ -100,15 +93,7 @@ export default function VerificationPanel({
         </button>
       )}
 
-      {isRejected && !isPending && (
-        <button
-          onClick={handleRetryClick}
-          className="p-3 bg-transparent border border-secondary text-secondary rounded-sm font-body
-            text-base font-semibold hover:scale-[1.02] active:scale-[0.98] transition-transform"
-        >
-          Re-upload Document
-        </button>
-      )}
+
     </div>
   );
 }

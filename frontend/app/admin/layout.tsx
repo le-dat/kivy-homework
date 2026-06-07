@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { ROUTES } from '@/constants';
 import LogoutButton from '@/components/LogoutButton';
 import Link from 'next/link';
 import RouteGuard from '@/components/RouteGuard';
@@ -10,7 +11,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const { user } = useAuth();
 
-  const isLoginPage = pathname === '/admin/login';
+  const isLoginPage = pathname === ROUTES.ADMIN_LOGIN;
 
   return (
     <RouteGuard allowedRoles={['ADMIN']}>
@@ -22,9 +23,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <span className="text-white/20">|</span>
               <nav className="flex items-center gap-1">
                 <Link
-                  href="/admin/dashboard"
+                  href={ROUTES.ADMIN_DASHBOARD}
                   className={`px-3 py-1.5 rounded-sm text-sm font-body font-semibold transition-colors ${
-                    pathname === '/admin/dashboard'
+                    pathname === ROUTES.ADMIN_DASHBOARD
                       ? 'bg-white/10 text-white'
                       : 'text-white/60 hover:text-white hover:bg-white/5'
                   }`}

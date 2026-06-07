@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { VerificationReconciliationService } from './verification-reconciliation.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { VerificationStateMachine } from './verification-state-machine.service';
+import { VerificationQueueService } from './verification-queue.service';
 import { VerificationStatus, ActorType } from '@prisma/client';
 
 describe('VerificationReconciliationService', () => {
@@ -45,6 +46,12 @@ describe('VerificationReconciliationService', () => {
         {
           provide: VerificationStateMachine,
           useValue: mockStateMachine,
+        },
+        {
+          provide: VerificationQueueService,
+          useValue: {
+            addVerificationJob: jest.fn().mockResolvedValue({}),
+          },
         },
       ],
     }).compile();

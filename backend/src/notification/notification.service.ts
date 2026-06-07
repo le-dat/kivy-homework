@@ -6,11 +6,7 @@ import { VerificationStatus } from '@prisma/client';
 export class NotificationService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createNotification(
-    sellerId: string,
-    title: string,
-    message: string,
-  ) {
+  async createNotification(sellerId: string, title: string, message: string) {
     return this.prisma.notification.create({
       data: { sellerId, title, message },
     });
@@ -42,14 +38,19 @@ export class NotificationService {
     status: VerificationStatus,
     reason?: string | null,
   ) {
-    const notificationConfig: Record<VerificationStatus, { title: string; message: string }> = {
+    const notificationConfig: Record<
+      VerificationStatus,
+      { title: string; message: string }
+    > = {
       [VerificationStatus.VERIFIED]: {
         title: 'Verification Approved',
-        message: 'Your identity has been verified. Your products are now visible to buyers.',
+        message:
+          'Your identity has been verified. Your products are now visible to buyers.',
       },
       [VerificationStatus.APPROVED]: {
         title: 'Verification Approved by Admin',
-        message: 'Your identity has been approved by our team. Your products are now visible to buyers.',
+        message:
+          'Your identity has been approved by our team. Your products are now visible to buyers.',
       },
       [VerificationStatus.REJECTED]: {
         title: 'Verification Rejected',
@@ -59,15 +60,18 @@ export class NotificationService {
       },
       [VerificationStatus.INCONCLUSIVE]: {
         title: 'Verification Requires Review',
-        message: 'Your verification is under manual review. We will notify you once the review is complete.',
+        message:
+          'Your verification is under manual review. We will notify you once the review is complete.',
       },
       [VerificationStatus.SYSTEM_ERROR]: {
         title: 'Verification Processing Issue',
-        message: 'There was an issue processing your verification. Please try again or contact support.',
+        message:
+          'There was an issue processing your verification. Please try again or contact support.',
       },
       [VerificationStatus.PENDING]: {
         title: 'Verification Submitted',
-        message: 'Your verification documents have been submitted and are being processed.',
+        message:
+          'Your verification documents have been submitted and are being processed.',
       },
       [VerificationStatus.PROCESSING]: {
         title: 'Verification Under Review',

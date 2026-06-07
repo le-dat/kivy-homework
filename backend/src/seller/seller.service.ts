@@ -38,25 +38,16 @@ export class SellerService {
       );
     }
 
-    // 2. Check for active verification
+    // 2. Check if verification request already exists (re-submission is disabled)
     const latest = await this.prisma.verification.findFirst({
       where: { sellerId },
       orderBy: { createdAt: 'desc' },
     });
 
     if (latest) {
-      const activeStates: VerificationStatus[] = [
-        VerificationStatus.PENDING,
-        VerificationStatus.PROCESSING,
-        VerificationStatus.INCONCLUSIVE,
-        VerificationStatus.VERIFIED,
-        VerificationStatus.APPROVED,
-      ];
-      if (activeStates.includes(latest.status)) {
-        throw new BadRequestException(
-          `Seller already has an active verification request with status ${latest.status}`,
-        );
-      }
+      throw new BadRequestException(
+        `Seller already has a verification request with status ${latest.status}`,
+      );
     }
 
     // 3. Upload the file to Supabase Storage

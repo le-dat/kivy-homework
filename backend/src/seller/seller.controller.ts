@@ -143,7 +143,10 @@ export class SellerController {
 
   @Get('notifications')
   @ApiOperation({ summary: "Get seller's notifications" })
-  @ApiResponse({ status: 200, description: 'List of notifications with unread count' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of notifications with unread count',
+  })
   async getNotifications(@CurrentUser() user: UserPayload) {
     return this.sellerService.getNotifications(user.id);
   }
