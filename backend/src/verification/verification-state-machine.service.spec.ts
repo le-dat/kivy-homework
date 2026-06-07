@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { VerificationStatus, ActorType } from '@prisma/client';
 import { VerificationStateMachine } from './verification-state-machine.service';
 import { PrismaService } from '../prisma/prisma.service';

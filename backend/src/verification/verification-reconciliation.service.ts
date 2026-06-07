@@ -26,13 +26,13 @@ export class VerificationReconciliationService {
       return;
     }
 
-    const mockServiceUrl =
-      process.env.MOCK_VERIFICATION_SERVICE_URL || 'http://localhost:3001';
+    const verificationServiceUrl =
+      process.env.VERIFICATION_SERVICE_URL || 'http://localhost:3001';
 
     for (const ver of processingVerifications) {
       try {
         const response = await fetch(
-          `${mockServiceUrl}/v1/verifications/${ver.id}`,
+          `${verificationServiceUrl}/v1/verifications/${ver.id}`,
         );
 
         if (response.status === 404) {

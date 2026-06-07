@@ -69,7 +69,8 @@ export class AdminController {
 
   @Get('verifications/all')
   @ApiOperation({
-    summary: 'List ALL verification requests without status filter (for All tab)',
+    summary:
+      'List ALL verification requests without status filter (for All tab)',
   })
   @ApiResponse({
     status: 200,

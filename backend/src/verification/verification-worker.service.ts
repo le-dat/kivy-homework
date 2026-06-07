@@ -39,10 +39,10 @@ export class VerificationWorkerService
       };
     }
 
-    const mockServiceUrl =
-      process.env.MOCK_VERIFICATION_SERVICE_URL || 'http://localhost:3001';
+    const verificationServiceUrl =
+      process.env.VERIFICATION_SERVICE_URL || 'http://localhost:3001';
     const callbackUrl =
-      process.env.BACKEND_WEBHOOK_URL ||
+      process.env.VERIFICATION_CALLBACK_URL ||
       'http://localhost:5000/api/v1/webhooks/verification';
 
     this.worker = new Worker(
@@ -54,17 +54,20 @@ export class VerificationWorkerService
         );
 
         try {
-          const response = await fetch(`${mockServiceUrl}/v1/verifications`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
+          const response = await fetch(
+            `${verificationServiceUrl}/v1/verifications`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                document_url: documentUrl,
+                callback_url: callbackUrl,
+                verification_id: verificationId, // Pass backend's ID to mock service
+              }),
             },
-            body: JSON.stringify({
-              document_url: documentUrl,
-              callback_url: callbackUrl,
-              verification_id: verificationId, // Pass backend's ID to mock service
-            }),
-          });
+          );
 
           if (response.status === 429) {
             this.logger.warn(

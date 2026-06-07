@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { VerificationStatus, ActorType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -134,7 +130,7 @@ export class VerificationStateMachine {
       if (!row) {
         this.logger.warn(
           `Verification with ID ${verificationId} not found for transition to ${nextStatus}. ` +
-          `This may be due to a race condition or the verification was already processed.`,
+            `This may be due to a race condition or the verification was already processed.`,
         );
         return null;
       }
