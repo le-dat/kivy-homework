@@ -37,7 +37,7 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
 
-  await app.listen(process.env.PORT ?? 5000);
+  await app.listen(process.env.PORT ?? 5000, '0.0.0.0');
 
   const signals: NodeJS.Signals[] = ['SIGTERM', 'SIGINT'];
   signals.forEach((sig) => {
