@@ -1,12 +1,12 @@
 # Kivy Seller Verification Platform
 
-Hệ thống quản lý và xác thực danh tính người bán (Seller Identity Verification Pipeline) được xây dựng bằng NestJS, Prisma, và Supabase (PostgreSQL). Hệ thống tích hợp Message Queue (BullMQ) để kiểm soát rate limit và xử lý tải cao trong quá trình onboarding.
+A seller identity verification pipeline (Seller Identity Verification Pipeline) built with NestJS, Prisma, and Supabase (PostgreSQL). The system integrates a Message Queue (BullMQ) for rate limit control and high-load handling during the onboarding process.
 
 ---
 
-## 🏗️ Kiến trúc hệ thống (System Architecture)
+## System Architecture
 
-Dưới đây là sơ đồ vận hành bất đồng bộ của ứng dụng:
+Below is the asynchronous operation diagram of the application:
 
 ```mermaid
 graph TD
@@ -29,70 +29,70 @@ graph TD
     Cron[Reconciliation Cron Job] -->|Active Polling Fallback| MS
 ```
 
-- **Next.js Frontend:** UI giao diện người dùng (Seller Dashboard / Admin Console).
-- **NestJS Backend:** Đóng vai trò làm API Gateway và xử lý toàn bộ logic nghiệp vụ.
-- **Redis & BullMQ:** Message Queue kiểm soát tần suất (Rate limit) gửi tài liệu sang dịch vụ bên ngoài.
-- **Verification Worker:** Lắng nghe hàng đợi để gửi yêu cầu xác thực sang dịch vụ Mock.
-- **Mock Verification Service:** Chạy độc lập, giả lập quá trình xác thực và trả kết quả bất đồng bộ.
-- **Reconciliation Cron:** Cơ chế đối soát chủ động đề phòng mất gói tin webhook.
+- **Next.js Frontend:** User interface (Seller Dashboard / Admin Console).
+- **NestJS Backend:** Acts as the API Gateway and handles all business logic.
+- **Redis & BullMQ:** Message Queue controlling the frequency (Rate limit) of document submissions to external services.
+- **Verification Worker:** Listens to the queue to send verification requests to the Mock service.
+- **Mock Verification Service:** Runs independently, simulates the verification process, and returns results asynchronously.
+- **Reconciliation Cron:** Active reconciliation mechanism in case webhook packets are lost.
 
 ---
 
-## 🌐 Đường dẫn ứng dụng đã Deploy (Production URLs)
+## Production URLs
 
 - **Frontend Web App:** [https://kivy-homework.vercel.app/](https://kivy-homework.vercel.app/)
-- **Backend REST API:** [https://kivy-backend.onrender.com](https://kivy-backend.onrender.com) (Tài liệu Swagger API: [https://kivy-backend.onrender.com/docs](https://kivy-backend.onrender.com/docs))
+- **Backend REST API:** [https://kivy-backend.onrender.com](https://kivy-backend.onrender.com) (Swagger API Docs: [https://kivy-backend.onrender.com/docs](https://kivy-backend.onrender.com/docs))
 - **Mock Verification Service:** [https://kivy-mock-service.onrender.com/](https://kivy-mock-service.onrender.com/)
 
 ---
 
-## 🔐 Tài khoản chạy thử (Seeded Credentials)
+## Seeded Credentials
 
-Cơ sở dữ liệu đã được seed sẵn các tài khoản thử nghiệm sau để phục vụ quá trình chấm điểm:
+The database has been pre-seeded with the following test accounts for evaluation purposes:
 
-| Vai trò    | Email             | Mật khẩu         | Chức năng kiểm thử                                             |
-| :--------- | :---------------- | :--------------- | :------------------------------------------------------------- |
-| **Seller** | `seller@kivy.com` | `sellerpassword` | Upload tài liệu xác thực, xem trạng thái, quản lý sản phẩm.    |
-| **Admin**  | `admin@kivy.com`  | `adminpassword`  | Xem danh sách hồ sơ xác thực, kiểm duyệt hồ sơ `INCONCLUSIVE`. |
+| Role     | Email             | Password       | Test Functionality                                               |
+| :------- | :---------------- | :------------- | :--------------------------------------------------------------- |
+| **Seller** | `seller@kivy.com` | `sellerpassword` | Upload verification documents, view status, manage products.     |
+| **Admin**  | `admin@kivy.com`  | `adminpassword` | View verification profiles list, moderate `INCONCLUSIVE` profiles. |
 
 > [!TIP]
-> **Đăng nhập nhanh (Auto-fill):** Màn hình đăng nhập của cả Admin và Seller đều tích hợp sẵn tính năng **"Click to auto-fill"** ở ngay dưới form. Bạn chỉ cần click vào hộp thông tin demo, hệ thống sẽ tự động điền tài khoản mà không cần nhập thủ công.
+> **Quick Login (Auto-fill):** Both Admin and Seller login screens have a built-in **"Click to auto-fill"** feature right below the form. Simply click on the demo info fields and the system will automatically fill in the credentials without manual entry.
 
 ---
 
-## 📊 Phạm vi hoàn thành (What's Built & What's Partial)
+## Scope of Completion
 
-### ✅ Những tính năng đã hoàn thành (What Works)
+### What Works
 
-1. **Xác thực và phân quyền:** Sử dụng JWT được lưu trữ an toàn trong **HttpOnly cookie**, phân chia quyền rõ ràng giữa Admin và Seller.
-2. **Seller Pipeline:** Tải lên tài liệu dạng Base64, tự động đưa vào hàng đợi kiểm duyệt, tạo và hiển thị danh sách sản phẩm.
-3. **Hàng đợi kiểm soát Rate Limit:** Tích hợp **BullMQ + Redis** để đảm bảo tốc độ gửi yêu cầu sang bên thứ ba không vượt quá giới hạn (Worker chạy ổn định ở mức ~80 req/phút).
-4. **State Machine:** Triển khai State Machine kiểm soát chặt chẽ quy trình chuyển đổi trạng thái (`PENDING` -> `PROCESSING` -> `VERIFIED` / `REJECTED` / `INCONCLUSIVE` -> `APPROVED` / `REJECTED`). Có cơ chế khóa bi quan (Row Locking) chống Race Condition khi webhook đến trùng lặp.
-5. **Reconciliation (Đối soát tự động):** Cron job quét định kỳ mỗi 10 phút, chủ động truy vấn API bên thứ ba cho những hồ sơ bị kẹt ở trạng thái `PROCESSING`.
-6. **Admin Dashboard:** Giao diện Next.js hiển thị biểu đồ chỉ số (Metrics), bảng danh sách hồ sơ lọc theo trạng thái, ngăn xem tài liệu trực quan, timeline ghi lại lịch sử sự kiện và hành động duyệt hồ sơ.
-7. **Mock Service:** Một dịch vụ Hono độc lập giả lập API bên thứ ba với các cơ chế rate limit (100 req/min), trả kết quả bất đồng bộ qua Webhook hoặc cho phép polling đối soát.
+1. **Authentication & Authorization:** Uses JWT stored securely in **HttpOnly cookies**, with clear role separation between Admin and Seller.
+2. **Seller Pipeline:** Uploads documents as Base64, automatically queues them for moderation, creates and displays product lists.
+3. **Rate-Limited Queue:** Integrated **BullMQ + Redis** to ensure the request sending rate to third parties does not exceed the limit (Worker runs stably at ~80 req/minute).
+4. **State Machine:** Implements a strict State Machine controlling status transitions (`PENDING` -> `PROCESSING` -> `VERIFIED` / `REJECTED` / `INCONCLUSIVE` -> `APPROVED` / `REJECTED`). Includes pessimistic locking (Row Locking) to prevent Race Conditions when duplicate webhooks arrive.
+5. **Reconciliation (Active Reconciliation):** Cron job scans every 10 minutes, actively queries the third-party API for records stuck in `PROCESSING` status.
+6. **Admin Dashboard:** Next.js interface displaying metrics charts, profile list filtered by status, intuitive document viewer, timeline recording event history and profile approval actions.
+7. **Mock Service:** An independent Hono service simulating a third-party API with rate limit mechanisms (100 req/min), returning verification results asynchronously via Webhook or allowing polling for reconciliation.
 
-### ⚠️ Những phần cố ý lược bỏ / Đơn giản hóa (Deliberately Cut / Partial)
+### Deliberately Cut / Partial
 
-1. **AWS S3 Storage:** Để tối ưu hóa thời gian thực hiện, tài liệu của seller hiện được lưu trữ trực tiếp dưới dạng Base64 trong database local hoặc ghi đĩa cục bộ thay vì đẩy lên dịch vụ S3 cloud thực tế.
-2. **Thông báo thời gian thực (Real-time WebSockets):** Trạng thái xác thực ở frontend hiện được cập nhật thông qua cơ chế Refresh/Polling đơn giản thay vì WebSocket hoặc Server-Sent Events (SSE).
-
----
-
-## 🚀 Hướng dẫn khởi chạy nhanh ở Local (Quick Start)
-
-Dự án gồm **3 thành phần** cần khởi chạy theo thứ tự: Database → Mock Service → Backend → Frontend.
-
-### Yêu cầu hệ thống (Prerequisites)
-
-- **Node.js** v20 trở lên
-- **pnpm** v9+ (hoặc npm/yarn)
-- **Docker** và Docker Compose (để khởi chạy Supabase local)
-- **Redis** (đã được cấu hình sẵn trong `REDIS_URL`ở `.env`)
+1. **AWS S3 Storage:** To optimize development time, seller documents are currently stored directly as Base64 in the local database or written to local disk instead of being pushed to an actual cloud S3 service.
+2. **Real-time Notifications (WebSockets):** Verification status on the frontend is currently updated via a simple Refresh mechanism instead of WebSocket or Server-Sent Events (SSE).
 
 ---
 
-### Bước 1: Khởi tạo Database (Supabase Local)
+## Quick Start
+
+The project consists of **3 components** that need to be started in order: Database → Mock Service → Backend → Frontend.
+
+### Prerequisites
+
+- **Node.js** v20 or higher
+- **pnpm** v9+ (or npm/yarn)
+- **Docker** and Docker Compose (to run Supabase local)
+- **Redis** (already configured in `REDIS_URL` in `.env`)
+
+---
+
+### Step 1: Initialize Database (Supabase Local)
 
 ```bash
 cd backend
@@ -100,62 +100,62 @@ pnpm install
 pnpm run db:setup
 ```
 
-Lệnh này sẽ:
+This command will:
 
-- Khởi động Docker Supabase local
-- Tự động chạy `prisma migrate dev` để tạo bảng
-- Sinh Prisma Client
+- Start Docker Supabase local
+- Automatically run `prisma migrate dev` to create tables
+- Generate Prisma Client
 
-> **Lưu ý:** File `.env` đã có sẵn với `DATABASE_URL` trỏ về Supabase local. Nếu chưa có, copy từ `.env.example`.
+> **Note:** The `.env` file already exists with `DATABASE_URL` pointing to Supabase local. If missing, copy from `.env.example`.
 
 ---
 
-### Bước 2: Khởi động Mock Service
+### Step 2: Start Mock Service
 
 ```bash
-# Mở terminal mới
+# Open a new terminal
 cd mock-service
 pnpm install
 pnpm run dev
 ```
 
-- Mock Service chạy trên **port 3001**
-- Giả lập API bên thứ 3 với rate limit 100 req/min
-- Trả kết quả verification qua Webhook hoặc polling
+- Mock Service runs on **port 3001**
+- Simulates a third-party API with rate limit of 100 req/min
+- Returns verification results via Webhook or polling
 
 ---
 
-### Bước 3: Khởi động Backend (NestJS)
+### Step 3: Start Backend (NestJS)
 
 ```bash
-# Mở terminal mới
+# Open a new terminal
 cd backend
 pnpm run start:dev
 ```
 
-- Backend chạy trên **port 5000**
-- Tự động kết nối Redis qua `REDIS_URL` trong `.env`
-- BullMQ worker xử lý verification queue
+- Backend runs on **port 5000**
+- Automatically connects to Redis via `REDIS_URL` in `.env`
+- BullMQ worker processes the verification queue
 
 ---
 
-### Bước 4: Khởi động Frontend (Next.js)
+### Step 4: Start Frontend (Next.js)
 
 ```bash
-# Mở terminal mới
+# Open a new terminal
 cd frontend
 pnpm install
 pnpm run dev
 ```
 
-- Frontend chạy trên **port 3000**
-- Kết nối backend tại `http://localhost:5000`
+- Frontend runs on **port 3000**
+- Connects to backend at `http://localhost:5000`
 
 ---
 
-### ✅ Kiểm tra
+### Verification
 
-Sau khi khởi chạy thành công:
+After successful startup:
 
 | Service       | URL                              |
 | ------------- | -------------------------------- |
@@ -165,35 +165,35 @@ Sau khi khởi chạy thành công:
 | Swagger Docs  | <http://localhost:5000/api/docs> |
 | Prisma Studio | `pnpm run db:studio` (port 5555) |
 
-**Tài khoản test:**
+**Test accounts:**
 
 - Seller: `seller@kivy.com` / `sellerpassword`
 - Admin: `admin@kivy.com` / `adminpassword`
 
 ---
 
-## 🛠️ Các lệnh CLI tiện ích (Database & Prisma CLI)
+## Database & Prisma CLI Commands
 
-| Lệnh chạy (`pnpm run <tên>`) | Mô tả chức năng                                                                                       |
+| Command (`pnpm run <name>`) | Description                                                                                           |
 | :--------------------------- | :---------------------------------------------------------------------------------------------------- |
-| `start:dev`                  | Khởi chạy server NestJS, tự động chạy `prisma migrate dev` trước để cập nhật DB local.                |
-| `db:setup`                   | Lệnh cài đặt nhanh: khởi động Docker Supabase local và chạy migrate tạo bảng.                         |
-| `db:migrate`                 | So sánh file schema, sinh ra file SQL migration mới và cập nhật cấu hình DB.                          |
-| `db:deploy`                  | **Lệnh dùng cho Production/CI-CD**. Tự động ghi đè bằng `DIRECT_URL` để chạy migration qua PgBouncer. |
-| `db:studio`                  | Mở giao diện Prisma Studio quản trị dữ liệu trực quan tại địa chỉ `http://localhost:5555`.            |
-| `db:generate`                | Sinh lại Prisma Client thủ công khi cập nhật schema.                                                  |
+| `start:dev`                  | Starts NestJS server, automatically runs `prisma migrate dev` first to update local DB.                |
+| `db:setup`                   | Quick setup command: starts Docker Supabase local and runs migrate to create tables.                   |
+| `db:migrate`                 | Compares schema files, generates new SQL migration file and updates DB configuration.                  |
+| `db:deploy`                  | **For Production/CI-CD**. Automatically overrides with `DIRECT_URL` to run migration via PgBouncer.    |
+| `db:studio`                  | Opens Prisma Studio web-based data management UI at `http://localhost:5555`.                           |
+| `db:generate`                | Manually regenerates Prisma Client after schema updates.                                               |
 
 ---
 
-## 🌐 Quy trình Deploy 
+## Deployment Guide
 
-### Trên Render
+### On Render
 
-Khi tạo một **Web Service** trên Render, hãy cấu hình các thông số sau:
+When creating a **Web Service** on Render, configure the following:
 
 - **Root Directory**: `backend`
 - **Build Command**: `pnpm install && pnpm run build`
 - **Start Command**: `pnpm run db:deploy && pnpm run start:prod`
-- **Environment Variables**: Khai báo đầy đủ 2 biến môi trường sau:
-  - `DATABASE_URL`: Cấu hình cổng Pooling `6543` kèm tham số `?pgbouncer=true` (dành cho kết nối ứng dụng).
-  - `DIRECT_URL`: Cấu hình cổng kết nối trực tiếp `5432` của Supabase (bắt buộc phải có để chạy migration không bị treo).
+- **Environment Variables**: Declare the following 2 environment variables:
+  - `DATABASE_URL`: Configure Pooling port `6543` with `?pgbouncer=true` parameter (for application connection).
+  - `DIRECT_URL`: Configure direct connection port `5432` of Supabase (required to run migration without hanging).

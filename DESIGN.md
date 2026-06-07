@@ -1,84 +1,86 @@
-## 1. Người bán (Seller) có được phép tạo sản phẩm trong khi chờ xác thực danh tính không?
+## 1. Can sellers create products while their identity verification is pending?
 
-#### Thiết kế A: Bắt buộc xác thực xong mới được tạo sản phẩm
+#### Design A: Must complete verification before creating products
 
-- **Ưu điểm:** Đảm bảo an toàn tuyệt đối. Không sợ hàng kém chất lượng lọt vào sàn. DB đơn giản.
-- **Nhược điểm:** Trải nghiệm người dùng (UX) rất kém. Seller phải xếp hàng chờ đợi mà không thao tác được gì.
+- **Pros:** Maximum safety. No low-quality products on the marketplace. Simpler DB.
+- **Cons:** Very poor UX. Sellers must wait in queue with nothing to do.
 
-#### Thiết kế B: Cho phép tạo sản phẩm trước, ẩn hiển thị cho đến khi được duyệt
+#### Design B: Allow creating products first, hidden until approved
 
-- **Ưu điểm:** Tối ưu hóa tỷ lệ chuyển đổi (onboarding conversion). Seller có thể setup gian hàng ngay.
-- **Nhược điểm:** Phân quyền và quản lý trạng thái sản phẩm phức tạp hơn (sản phẩm tạo mới mặc định ẩn hoặc ở trạng thái nháp).
+- **Pros:** Optimized onboarding conversion. Sellers can set up their store immediately.
+- **Cons:** More complex product status management and permissions (new products default to hidden/draft state).
 
-> **Chọn thiết kế B**. Với áp lực 5.000 seller tuần đầu và giới hạn xác thực 100 requests/phút, bắt seller xếp hàng chờ không làm gì sẽ phá hỏng trải nghiệm UX. Đánh đổi thêm phân quyền quản lí và db bị phình hơn để tối ưu trải nghiệm người dùng.
-
----
-
-## 2. Launch Week (Vận hành dưới tải trọng cao & Giới hạn tài nguyên)
-
-### Ràng buộc vận hành
-
-- **Tải trọng:** ~5.000 seller đăng ký tuần đầu.
-- **Giới hạn tài nguyên:** Chi phí 2 USD/request, giới hạn tốc độ tối đa 100 requests/phút.
-
-### Giải pháp xử lý của hệ thống
-
-1. **Nhận File & Phản hồi ngay:** Seller upload tài liệu -> Lưu DB với trạng thái `PENDING` -> Trả kết quả thành công lập tức để seller tiếp tục thao tác.
-2. **Đưa vào hàng đợi (Queue):** Đẩy thông tin xác thực vào Message Queue (ví dụ: BullMQ).
-3. **Worker kiểm soát tốc độ:** Worker ngầm lấy job từ Queue gửi sang bên thứ ba với tốc độ an toàn (~80 requests/phút) để tránh vượt rate limit.
-4. **Lọc trước lỗi (Pre-validation):** Backend tự kiểm tra định dạng và dung lượng file trước khi gửi đi. Bản ghi lỗi sẽ bị `REJECTED` ngay tại local, giúp tiết kiệm chi phí 2 USD cho mỗi request rác.
-
-### Các đánh đổi
-
-- **Chọn bảo vệ hệ thống & ngân sách:** Chấp nhận hàng đợi bị dồn ứ lúc cao điểm (seller chờ lâu hơn), đảm bảo hệ thống không sập và không mất phí phạt do gọi API quá giới hạn.
-- **Loại bỏ xử lý thời gian thực (Real-time):** Không gọi API trực tiếp ngay khi upload để tránh quá tải khi 5.000 seller đồng thời thao tác.
-
-> **Điểm ít tự tin nhất:** Sự kiên nhẫn của seller khi chờ đợi. Nếu tỷ lệ rời bỏ cao, hệ thống sẽ nâng cấp thêm hàng đợi ưu tiên (Priority Queue) hoặc tích hợp nhà cung cấp phụ.
+> **Choose Design B.** With pressure of 5,000 sellers in the first week and a rate limit of 100 requests/minute, forcing sellers to wait with no action will destroy UX. Trading additional management complexity and a slightly larger DB is worth it for better user experience.
 
 ---
 
-## 3. State Machine (Vòng đời trạng thái)
+## 2. Launch Week (Operating Under High Load & Resource Constraints)
+
+### Operational Constraints
+
+- **Load:** ~5,000 seller registrations in the first week.
+- **Resource limits:** $2 USD per request, max rate limit 100 requests/minute.
+
+### System Handling Strategy
+
+1. **Receive File & Respond Immediately:** Seller uploads documents -> Save to DB with `PENDING` status -> Return success immediately so seller can continue.
+2. **Enqueue to Queue:** Push verification info to Message Queue (e.g., BullMQ).
+3. **Rate-limited Worker:** Worker silently pulls jobs from Queue and sends to third party at a safe rate (~80 requests/minute) to avoid exceeding rate limit.
+4. **Pre-validation:** Backend validates file format and size before sending. Error records are `REJECTED` locally, saving $2 USD per garbage request.
+
+### Trade-offs
+
+- **Prioritize system & budget protection:** Accept queue buildup during peak times (sellers wait longer), ensuring the system doesn't crash and avoiding penalty fees from exceeding API rate limits.
+- **Remove real-time processing:** Don't call API directly on upload to avoid overload when 5,000 sellers simultaneously operate.
+
+> **Least confident point:** Seller patience while waiting. If dropout rate is high, the system will be upgraded with Priority Queue or additional provider integration.
+
+---
+
+## 3. State Machine (Verification Lifecycle)
 
 ```mermaid
 stateDiagram-v2
     [*] --> PENDING
-    PENDING --> PROCESSING : System xử lý
-    PROCESSING --> VERIFIED : Thành công
-    PROCESSING --> REJECTED : Từ chối
-    PROCESSING --> INCONCLUSIVE : Cần duyệt tay
-    PROCESSING --> SYSTEM_ERROR : Lỗi hệ thống / Hết retry
-    INCONCLUSIVE --> APPROVED : Admin duyệt chấp nhận
-    INCONCLUSIVE --> REJECTED : Admin từ chối
+    PENDING --> PROCESSING : System processes
+    PROCESSING --> VERIFIED : Success
+    PROCESSING --> REJECTED : Rejected
+    PROCESSING --> INCONCLUSIVE : Manual review needed
+    PROCESSING --> SYSTEM_ERROR : System error / Retry exhausted
+    INCONCLUSIVE --> APPROVED : Admin approves
+    INCONCLUSIVE --> REJECTED : Admin rejects
 ```
 
-### Bảo vệ trạng thái kết thúc (Terminal State Guard)
+### Terminal State Guard
 
 > [!CAUTION]
-> **Lỗi lập trình viên cẩu thả dễ mắc phải:** Chỉ kiểm tra điều kiện lỏng lẻo (ví dụ: chỉ tìm bản ghi theo `id` để cập nhật trạng thái mà không kiểm tra trạng thái hiện tại trong DB, hoặc chỉ check `WHERE status = 'PROCESSING'`).
-> *Hậu quả của sai lầm này:* Khi một Webhook thông báo kết quả `INCONCLUSIVE` (cần duyệt tay) được admin xử lý và cập nhật thành `APPROVED` (trạng thái kết thúc). Ngay sau đó, một Webhook cũ báo `REJECTED` bị trễ do nghẽn mạng gửi đến muộn. Nếu engineer cẩu thả chỉ chạy lệnh `UPDATE` dựa theo ID bản ghi hoặc không bảo vệ trạng thái kết thúc, Webhook cũ này sẽ ghi đè trạng thái `APPROVED` của admin thành `REJECTED`, phá hỏng tính nhất quán của hệ thống.
+> **Common careless programmer mistake:** Using loose conditions (e.g., only finding record by `id` to update status without checking current status in DB, or only checking `WHERE status = 'PROCESSING'`).
+> *Consequence of this mistake:* When a Webhook reports `INCONCLUSIVE` (needs manual review) and admin processes it changing status to `APPROVED` (terminal state). Immediately after, a delayed Webhook reporting `REJECTED` arrives late due to network congestion. If the engineer carelessly runs `UPDATE` based on record ID without protecting terminal states, this late Webhook will overwrite the admin's `APPROVED` status with `REJECTED`, breaking system consistency.
 >
-> **Giải pháp bảo vệ:** Trạng thái kết thúc (`VERIFIED`, `APPROVED`, `REJECTED`, `SYSTEM_ERROR`) là **bất biến (Immutable)**. Chặn ghi đè trực tiếp ở câu lệnh cập nhật DB:
+> **Protection solution:** Terminal states (`VERIFIED`, `APPROVED`, `REJECTED`, `SYSTEM_ERROR`) are **immutable**. Block direct overwrites in the DB update statement:
 > `UPDATE verifications SET status = :new_status WHERE id = :id AND status NOT IN ('VERIFIED', 'APPROVED', 'REJECTED', 'SYSTEM_ERROR')`
 
 ---
 
-## 4. What you deliberately did not build (Cố ý lược bỏ cho V1)
+## 4. What You Deliberately Did Not Build (Intentionally Omitted for V1)
 
-**Tính năng lược bỏ:** Luồng gửi lại hồ sơ (Re-upload/Resubmission flow) khi bị từ chối (`REJECTED`) hoặc gặp lỗi hệ thống (`SYSTEM_ERROR`).
+**Omitted feature:** Re-upload/resubmission flow when rejected (`REJECTED`) or system error (`SYSTEM_ERROR`).
 
-- **Lý do:** Tiết kiệm thời gian phát triển giao diện người dùng và tránh kiểm soát các trạng thái chuyển đổi phức tạp. Mỗi Seller chỉ có duy nhất 1 bản ghi yêu cầu xác thực trong hệ thống, giúp loại bỏ hoàn toàn rủi ro race condition khi người dùng cố tình hoặc vô tình gửi lại (re-submit) tài liệu liên tục trong lúc Worker/Webhook đang xử lý.
-- **Rủi ro:** Khi Seller nhập sai thông tin hoặc upload ảnh lỗi dẫn đến trạng thái từ chối (`REJECTED`), họ sẽ bị kẹt vĩnh viễn và không thể tự thực hiện lại quy trình xác thực trên giao diện.
+- **Reason:** Save UI development time and avoid complex state transition control. Each seller has only 1 verification request record in the system, completely eliminating race condition risk when users intentionally or accidentally resubmit documents while Worker/Webhook is still processing.
+- **Risk:** When a seller enters wrong information or uploads a broken image leading to `REJECTED` status, they are permanently stuck and cannot re-initiate verification on the UI.
 
 ---
 
-## 5. The failure that worries you most (Lỗi lo sợ nhất trong Production)
+## 5. The Failure That Worries You Most (Most Feared Production Failure)
 
-**Lỗi đáng sợ nhất:** **Mất Webhook phản hồi từ bên thứ ba (do sập mạng hoặc lỗi hệ thống).**
-Hậu quả: Hồ sơ của seller bị kẹt ở trạng thái `PROCESSING` vô thời hạn.
+**Most feared failure:** **Lost webhook responses from third party (due to network outage or system failure).**
+Consequence: Seller records get stuck in `PROCESSING` status indefinitely.
 
-### Giải pháp giảm thiểu (Mitigation Strategy)
+### Mitigation Strategy
 
-1. **Reconciliation (Đối soát tự động):** Chạy Cron job quét database mỗi 10 phút để tìm các bản ghi ở trạng thái `PROCESSING`.
-2. **State Pulling (Chủ động truy vấn):** Gọi API `GET /verifications/{id}` của bên thứ ba để đối chiếu và cập nhật trạng thái mới nhất về DB.
-3. **Retry với Exponential Backoff & Jitter:** Khi API đối soát gặp lỗi kết nối, thử lại theo chu kỳ tăng dần: lần 1 sau **5 phút**, lần 2 sau **15 phút**, lần 3 sau **1 giờ**, lần 4 sau **4 giờ** (kèm theo độ trễ ngẫu nhiên - Jitter từ 1-5 phút để phân tán lưu lượng tải đột biến).
-4. **Xử lý khi cạn kiệt (Exhausted):** Khi cạn kiệt số lần thử lại tại Worker hoặc gặp lỗi hệ thống nghiêm trọng, chuyển bản ghi sang trạng thái `SYSTEM_ERROR`, ghi log chi tiết để kỹ sư trực hệ thống kiểm tra thủ công.
+1. **Reconciliation (Automatic reconciliation):** Run Cron job scanning database every 10 minutes to find records in `PROCESSING` status.
+2. **State Pulling (Active querying):** Call third-party `GET /verifications/{id}` API to compare and update latest status to DB.
+3. **Retry with Exponential Backoff:** Two retry mechanisms:
+   - **BullMQ Worker:** Exponential backoff with 60s base (60s→120s→240s→480s→960s), max 5 attempts. Retries for connection errors when sending jobs to third party.
+   - **Reconciliation Cron:** Retry on next cron cycle (10 minutes). No separate exponential backoff — each cron cycle is one "attempt" and the system keeps going until a response arrives or transitions to SYSTEM_ERROR.
+4. **Exhausted Handling:** When BullMQ worker exhausts all retry attempts (5 times), transition record to `SYSTEM_ERROR` status, log details for on-call engineers to manually investigate.
