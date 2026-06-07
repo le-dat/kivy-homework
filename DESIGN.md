@@ -64,11 +64,10 @@ stateDiagram-v2
 
 ## 4. What you deliberately did not build (Cố ý lược bỏ cho V1)
 
-**Tính năng lược bỏ:** Tích hợp Cloud Storage thực tế (AWS S3) và hệ thống phân quyền phức tạp (OAuth).
+**Tính năng lược bỏ:** Luồng gửi lại hồ sơ (Re-upload/Resubmission flow) khi bị từ chối (`REJECTED`) hoặc gặp lỗi hệ thống (`SYSTEM_ERROR`).
 
-- **Lý do:** Tiết kiệm thời gian cấu hình hạ tầng Cloud để tập trung hoàn thiện các tính năng cốt lõi (Hàng đợi, Worker, Giao diện Admin) trong 4-5 tiếng làm bài. Dữ liệu file được lưu tạm thời dưới dạng Base64 trong DB hoặc ghi đĩa cục bộ.
-- **Rủi ro:** Mất dữ liệu nếu server bị khởi động lại, phình to dung lượng database do dữ liệu Base64.
-- **Giảm thiểu rủi ro:** Giới hạn kích thước file upload dưới 2MB và ghi logs vết lưu trữ rõ ràng để phục vụ debug.
+- **Lý do:** Tiết kiệm thời gian phát triển giao diện người dùng và tránh kiểm soát các trạng thái chuyển đổi phức tạp. Mỗi Seller chỉ có duy nhất 1 bản ghi yêu cầu xác thực trong hệ thống, giúp loại bỏ hoàn toàn rủi ro race condition khi người dùng cố tình hoặc vô tình gửi lại (re-submit) tài liệu liên tục trong lúc Worker/Webhook đang xử lý.
+- **Rủi ro:** Khi Seller nhập sai thông tin hoặc upload ảnh lỗi dẫn đến trạng thái từ chối (`REJECTED`), họ sẽ bị kẹt vĩnh viễn và không thể tự thực hiện lại quy trình xác thực trên giao diện.
 
 ---
 
