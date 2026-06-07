@@ -1,15 +1,49 @@
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import type { ReactNode } from 'react';
+'use client';
+
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { ROUTES } from '@/constants';
 import LogoutButton from '@/components/LogoutButton';
+import type { ReactNode } from 'react';
 
-export default async function SellerLayout({ children }: { children: ReactNode }) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('token')?.value;
+export default function SellerLayout({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user } = useAuth();
+  const [mounted, setMounted] = useState(false);
 
-  if (!token) {
-    redirect(ROUTES.LOGIN);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    const isLoginPage = pathname === '/seller/login';
+
+    if (!user && !isLoginPage) {
+      router.push('/seller/login');
+    } else if (user && isLoginPage) {
+      router.push('/seller/dashboard');
+    } else if (user && user.role !== 'SELLER' && !isLoginPage) {
+      router.push('/seller/login');
+    }
+  }, [user, pathname, router, mounted]);
+
+  if (!mounted) {
+    return <div className="min-h-screen bg-[#EDEADE]" />;
+  }
+
+  const isLoginPage = pathname === '/seller/login';
+
+  if (!user && !isLoginPage) {
+    return (
+      <div className="min-h-screen bg-[#EDEADE] flex items-center justify-center font-body text-[#111827]">
+        Loading Seller Console...
+      </div>
+    );
   }
 
   return (
