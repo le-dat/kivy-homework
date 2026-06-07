@@ -60,3 +60,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 # Supabase local state
 /supabase/.temp/
 /supabase/.branches/
+
+# Uploaded files (user-generated content)
+uploads/

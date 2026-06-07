@@ -2,10 +2,15 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { VerificationModule } from './verification/verification.module';
+import { AuthModule } from './auth/auth.module';
+import { SellerModule } from './seller/seller.module';
+import { AdminModule } from './admin/admin.module';
+import { ProductModule } from './product/product.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -19,12 +24,19 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
         limit: 50,
       },
     ]),
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads',
+    }),
     PrismaModule,
     VerificationModule,
+    AuthModule,
+    SellerModule,
+    AdminModule,
+    ProductModule,
   ],
   controllers: [AppController],
   providers: [
-    AppService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
