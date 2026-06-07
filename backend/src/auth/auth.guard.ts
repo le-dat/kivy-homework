@@ -48,8 +48,11 @@ export class JwtAuthGuard implements CanActivate {
 
     const cookies = rawCookie.split(';').reduce(
       (acc, c) => {
-        const [key, val] = c.trim().split('=');
-        if (key && val) {
+        const eqIndex = c.indexOf('=');
+        if (eqIndex === -1) return acc;
+        const key = c.substring(0, eqIndex).trim();
+        const val = c.substring(eqIndex + 1).trim();
+        if (key) {
           acc[key] = val;
         }
         return acc;
